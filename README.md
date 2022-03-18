@@ -1,2 +1,2 @@
 # dixit-telegram-bot
-Bot for Telegram to play Dixit with your friends!
+A Telegram Bot to play Dixit with your friends!
