@@ -23,5 +23,6 @@ def run_bot(token):
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                      level=logging.INFO)
-    token = sys.argv[1]
-    run_bot(token)
+    with open('token.txt', 'r') as token_file:
+        token = token_file.readline()[:-1] # Remove \n at the end
+        run_bot(token)
