@@ -1,6 +1,7 @@
 from telegram import Update, InlineQueryResultPhoto, InputTextMessageContent
 from telegram.ext import Updater, CallbackContext, CommandHandler, InlineQueryHandler
 from uuid import uuid4
+from random import choices
 import sys
 import logging
 
@@ -11,24 +12,21 @@ def start(update: Update, context: CallbackContext):
     context.bot.send_message(chat_id=update.effective_chat.id, text="Let's play Dixit!")
 
 def inline(update: Update, context: CallbackContext):
-    results = []
-    # for n in range(1, 10):
-    #     results.append(
-    #         InlineQueryResultPhoto(
-    #             id = str(uuid4()),
-    #             photo_url = f'https://raw.githubusercontent.com/jminuscula/dixit-online/master/cards/card_0000{n}.jpg',
-    #             thumb_url = f'https://raw.githubusercontent.com/jminuscula/dixit-online/master/cards/card_0000{n}.jpg',
-    #             title = f'Photo number {n}'
-    #         )
-    #     )
-    results.append(
-        InlineQueryResultPhoto(
-            id = str(uuid4()),
-            photo_url = f'https://nerdist.com/wp-content/uploads/2020/07/maxresdefault.jpg',
-            thumb_url = f'https://www.kitchener.ca/en/images/structure/news_avatar.jpg',
-            title = f'Rickzin'
-        )
-    )
+    # Supostamente roda quando o usuário faz um query inline, mas está se comportando bem mal
+
+    def imagem_dixit_github(n):
+        # Fetches the n-th image from the github image repo and returns an InlineQueryResultPhoto
+        url_imagem = 'https://raw.githubusercontent.com/jminuscula/'\
+                + f'dixit-online/master/cards/card_{n:0>5}.jpg'
+        print(url_imagem)
+        return InlineQueryResultPhoto(
+                id = str(uuid4()),
+                photo_url = url_imagem,
+                thumb_url = url_imagem,
+                title = f"card {n} in the player's hand")
+        
+    results = [imagem_dixit_github(n) for n in choices(range(1, 101), k=6)]
+    print()
     update.inline_query.answer(results)
 
 def run_bot(token):
