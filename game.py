@@ -29,6 +29,17 @@ class Card:
         self.photo_id = photo_id
         self.game_id = game_id
 
+    def __eq__(self, other):
+        return self.photo_id == other.photo_id and\
+               self.game_id == other.game_id
+
+def image_dixit_github(n, game_id):
+    '''Fetches the n-th image from the github image repo and returns the
+    associated Card class'''
+    url_imagem = 'https://raw.githubusercontent.com/jminuscula/'\
+            + f'dixit-online/master/cards/card_{n:0>5}.jpg'
+    return Card(url_imagem, game_id)
+
 class Player:
 
     def __init__(self, user: User, hand_cards: list[Card] = []):
@@ -38,6 +49,9 @@ class Player:
         self.user = user
         self.hand_cards = hand_cards
 
+    def add_card(self, card):
+        self.hand_cards.append(card)
+
 class DixitGame:
 
     def __init__(self,
@@ -45,7 +59,10 @@ class DixitGame:
                  players: list[Player] = [],
                  storyteller: Optional[int] = None,
                  clue: Optional[str] = None,
-                 cards: list[Card] = []):
+                 cards: list[Card] = [],
+                 chosen_cards: list[int] = [], # list of game_id's
+                 storyteller_card: Optional[int] = None, # game_id of card
+                 cards_per_player: int = 6):
         '''storyteller should be an integer indicating the index of the player in
         tge list `players` that is the storyteller'''
         self.stage = stage
@@ -53,6 +70,7 @@ class DixitGame:
         self.storyteller = storyteller
         self.clue = clue
         self.cards = cards
+        self.cards_per_player = cards_per_player
         self.verify()
 
     def verify(self):
@@ -69,6 +87,20 @@ class DixitGame:
 
     def get_user_list(self):
         return [player.user for player in self.players]
+
+    def find_player_by_user(self, user):
+        '''Finds player by user. If not, returns ValueError'''
+        for index, player in enumerate(self.players):
+            if player.user == user:
+                return index
+        raise ValueError('No player found by user')
+
+    def find_player_by_id(self, user_id):
+        '''Finds player by user_id. If not, returns ValueError'''
+        for index, player in enumerate(self.players):
+            if player.user.id == user_id:
+                return index
+        raise ValueError('No player found by id')
 
     def next_stage(self):
         self.stage = (self.stage + 1) % 4
