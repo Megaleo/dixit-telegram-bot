@@ -130,7 +130,8 @@ def inline_callback(update, context):
     if 'dixit_game' in context.chat_data.keys():
         dixit_game = context.chat_data['dixit_game']
         if user in dixit_game.get_user_list():
-            player = dixit_game.get_user_list().index(user)
+            player_index = dixit_game.get_user_list().index(user)
+            player = dixit_game.players[player_index]
             if dixit_game.stage in [1, 2]:
                 results = [InlineQueryResultPhoto(
                            id = str(uuid4()),
