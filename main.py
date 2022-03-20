@@ -62,9 +62,6 @@ def start_game_callback(update, context):
                                      f"The master {user.first_name} "
                                       "has started a game.")
 
-    dixit_games.append(dixit_game)
-
-
 @ensure_game
 def join_game_callback(update, context):
     '''Command callback. When /joingame is called, it does the following:
@@ -130,39 +127,35 @@ def inline_callback(update, context):
     If stage == 3, then show chosen cards
     Otherwise, do nothing'''
     user = update.inline_query.from_user
-    user_games = [game for game in dixit_games if user in game.get_user_list()]
-    if not user_games:
-        ...
-        return
-    elif len(user_games)>1:
-        ...
-        # futuramente, impedir usuário de entrar em mais de um jogo
-    dixit_game = user_games[0]
-    player_index = dixit_game.get_user_list().index(user)
-    player = dixit_game.players[player_index]
-    if dixit_game.stage in [1, 2]:
-        results = [InlineQueryResultPhoto(
-                   id = str(uuid4()),
-                   photo_url = card.photo_id,
-                   thumb_url = card.photo_id,
-                   title = f"Card {card.game_id} in the player's hand",
-                   input_message_content = InputTextMessageContent(
-                   f"{user.id}:{card.game_id}"
-                   ))
-                   for card in player.hand_cards]
+    if 'dixit_game' in context.chat_data.keys():
+        dixit_game = context.chat_data['dixit_game']
+        if user in dixit_game.get_user_list():
+            player = dixit_game.get_user_list().index(user)
+            if dixit_game.stage in [1, 2]:
+                results = [InlineQueryResultPhoto(
+                           id = str(uuid4()),
+                           photo_url = card.photo_id,
+                           thumb_url = card.photo_id,
+                           title = f"Card {card.game_id} in the player's hand",
+                           input_message_content = InputTextMessageContent(
+                           f"{user.id}:{card.game_id}"
+                           ))
+                           for card in player.hand_cards]
 
-    elif dixit_game.stage == 3:
-        results = [InlineQueryResultPhoto(
-                   id = str(uuid4()),
-                   photo_url = card.photo_id,
-                   thumb_url = card.photo_id,
-                   title = f"Chosen card {card.game_id}",
-                   input_message_content = InputTextMessageContent(
-                   f"{user.id}:{card.game_id}"
-                   ))
-                   for card in dixit_game.chosen_cards]
+            elif dixit_game.stage == 3:
+                results = [InlineQueryResultPhoto(
+                           id = str(uuid4()),
+                           photo_url = card.photo_id,
+                           thumb_url = card.photo_id,
+                           title = f"Chosen card {card.game_id}",
+                           input_message_content = InputTextMessageContent(
+                           f"{user.id}:{card.game_id}"
+                           ))
+                           for card in dixit_game.chosen_cards]
+            else:
+                results = [] # gostaria de botar um texto, mas n vi como
 
-    update.inline_query.answer(results) 
+            update.inline_query.answer(results) 
 
 
 # deprecado?        
@@ -186,8 +179,6 @@ def inline(update: Update, context: CallbackContext):
 
 
 def run_bot(token):
-    global dixit_games
-    dixit_games = []
     updater = Updater(token, use_context=True)
     dispatcher = updater.dispatcher
     
