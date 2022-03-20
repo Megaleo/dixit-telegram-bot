@@ -74,21 +74,7 @@ class DixitGame:
         self.clue = clue
         self.cards = cards
         self.cards_per_player = cards_per_player
-        # self.verify()
 
-    # ESTOU COMENTANDO ISSO EM FAVOR DA ABORDAGEM COM SETTERS ABAIXO
-    # MAS TALVEZ DEVESSEMOS SÓ USAR ENUMS?
-    #
-    # def verify(self):
-    #     '''Verify consistency of its properties'''
-    #     if self.stage not in [0, 1, 2, 3]:
-    #         raise ValueError(f'Stage number {self.stage} '
-    #                           'should be between 0 and 3')
-    #     if self.storyteller and 
-    #        self.storyteller not in range(len(self.players)):
-    #         raise ValueError(f'There is no player in index {self.storyteller} '
-    #                          f'(maximum is {len(self.players)-1})')
-    
     @property
     def stage(self):
         return self._stage
