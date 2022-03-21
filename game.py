@@ -22,7 +22,6 @@ from typing import Optional, List
 from telegram import User
 
 class Card:
-
     def __init__(self, photo_id: int, game_id: int):
         '''photo_id is the id of the photo in Telegram's cache (or,
         temporarily, on the web)
@@ -45,7 +44,6 @@ def image_dixit_github(n: int, game_id: int):
 
 
 class Player:
-
     def __init__(self, user: User, hand_cards=None):
         '''user contains id and name. See
         https://python-telegram-bot.readthedocs.io/en/latest/telegram.user.html#telegram.User
@@ -53,6 +51,18 @@ class Player:
         self.user = user
         self.hand_cards = hand_cards or []
         self.name = ' '.join(filter(bool, [user.first_name, user.last_name])) 
+
+    def __repr__(self):
+        return f'Player({self.name=}, {self.user.id=})'
+
+    def __str__(self):
+        return self.name
+
+    def __eq__(self, other):
+        return self.user.id == other.user.id
+    
+    def __hash__(self):
+        return self.user.id
 
     def add_card(self, card):
         self.hand_cards.append(card)
@@ -123,21 +133,22 @@ class DixitGame:
         self.master = self.master or player
 
 
-    # usar self.get_user_list.index(user)?
-    def find_player_by_user(self, user):
-        '''Finds player by user. If not, returns ValueError'''
-        for index, player in enumerate(self.players):
-            if player.user == user:
-                return index
-        raise ValueError('No player found by user')
+    ## A SER DEPRECADOS
+    # # usar self.get_user_list.index(user)?
+    # def find_player_by_user(self, user):
+    #     '''Finds player by user. If not, returns ValueError'''
+    #     for index, player in enumerate(self.players):
+    #         if player.user == user:
+    #             return index
+    #     raise ValueError('No player found by user')
 
-    # [u.id for u in self.players].index(id)? Será que de fato reimplementamos?
-    def find_player_by_id(self, user_id):
-        '''Finds player by user_id. If not, returns ValueError'''
-        for index, player in enumerate(self.players):
-            if player.user.id == user_id:
-                return index
-        raise ValueError('No player found by id')
+    # # [u.id for u in self.players].index(id)? Será que de fato reimplementamos?
+    # def find_player_by_id(self, user_id):
+    #     '''Finds player by user_id. If not, returns ValueError'''
+    #     for index, player in enumerate(self.players):
+    #         if player.user.id == user_id:
+    #             return index
+    #     raise ValueError('No player found by id')
 
-    def next_stage(self):
-        self.stage = (self.stage + 1) % 4
+    # def next_stage(self):
+    #     self.stage = (self.stage + 1) % 4
