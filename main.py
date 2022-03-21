@@ -267,9 +267,8 @@ def parse_cards(update, context):
         print("\n\nWe're now in stage 2: others' turn!\n")
         context.bot.send_message(chat_id=update.effective_chat.id,
                                  text=f"Now, let the others send their cards!")
-        return
 
-    if dixit_game.stage == 2:
+    elif dixit_game.stage == 2:
         # allows players to overwrite the card sent
         # TODO: check that the card was indeed in the player's hand
         dixit_game.table[user_id] = card_sent
@@ -284,15 +283,13 @@ def parse_cards(update, context):
             print("\n\nWe're now in stage 3: Vote!\n")
             context.bot.send_message(chat_id=update.effective_chat.id,
                                      text=f"Time to vote!")
-        return
 
-    if dixit_game.stage == 3:
+    elif dixit_game.stage == 3:
         print(f"I've received ({len(dixit_game.table)}/"
               f"{len(dixit_game.players) - 1}) votes")
         dixit_game.votes[user_id] = card_sent
         if len(dixit_game.votes) == len(dixit_game.players)-1:
             end_of_round(update, context)
-        return
 
 
 def end_of_round(update, context):
