@@ -2,7 +2,7 @@ from telegram import Update, InlineQueryResultPhoto, InputTextMessageContent
 from telegram.ext import (Updater, CallbackContext, CommandHandler,
                           InlineQueryHandler, MessageHandler, Filters)
 from uuid import uuid4
-from random import choices, shuffle, randrange
+from random import choice, choices, shuffle, randrange
 import sys
 import logging
 
@@ -47,7 +47,7 @@ def find_user_games(context, user):
     game they want to play at that time like the unobot does.'''
     return {chat_id: dixit_game
             for chat_id, dixit_game in get_active_games(context).items()
-            if user in dixit_game.get_user_list()}
+            if user in dixit_game.users}
 
 
 def ensure_game(callback):
@@ -104,9 +104,7 @@ def start_game_callback(update, context):
         dixit_game = game.DixitGame(cards=cards) 
         context.chat_data['dixit_game'] = dixit_game
 
-        context.chat_data['master'] = user # Sets master
-        master_player = game.Player(user)
-        dixit_game.add_player(master_player)
+        dixit_game.add_player(user) # first player is automatically master
 
         send_message(f"Let's play Dixit!\nThe master {user.first_name} "
                       "has started a game.", update, context)
@@ -118,21 +116,19 @@ def join_game_callback(update, context):
     1. Checks if user has already joined the game
     1.1. If not, adds user who called it to the game's players list'''
     dixit_game = context.chat_data['dixit_game']
-    n_supported_players = len(dixit_game.cards)//dixit_game.cards_per_player
     user = update.message.from_user
     print(f'Entrou: {user.first_name=}, {user.id=}')
-    if user in dixit_game.get_user_list():
+    if user in dixit_game.users:
         send_message(f"Damn you, {user.first_name}! You have already joined "
                       "the game!", update, context)
     # Checks if there are enough cards for user to join
-    elif len(dixit_game.players) >= n_supported_players:
+    elif len(dixit_game.players) >= dixit_game.max_players:
         send_message("There are only enough cards in the game to supply "
-                     f"{n_supported_players} players, unfortunately!", 
+                     f"{dixit_game.max_players} players, unfortunately!", 
                      update, context)
-            # ask if they'd like to play with fewer cards per player?
+        # ask if they'd like to play with fewer cards per player?
     else:
-        player = game.Player(user)
-        dixit_game.add_player(player)
+        dixit_game.add_player(user)
         send_message(f"{user.first_name} was added to the game!", 
                      update, context)
 
@@ -140,16 +136,16 @@ def join_game_callback(update, context):
 def play_game_callback(update, context):
     '''Command callback. When /playgame is called, it does the following:
     1. Distributes cards to players;
-    2. Chooses storyteller = 0 (the first player to join);
+    2. Chooses random storyteller
     3. (For later) Messages button to prompt inline query;
     4. Goes from stage 0 to 1.'''
     dixit_game = context.chat_data['dixit_game']
-    master = context.chat_data['master']
+    master = dixit_game.master
     user = update.message.from_user
     # Checks if it was the master who requested /playgame
-    if user != master:
+    if user != master.user:
         send_message(f"Damn you, {user.first_name}! You are not the master "
-                     f"{master.first_name}!", update, context)
+                     f"{master.name}!", update, context)
     # Check if the game hadn't been started before
     elif dixit_game.stage != 0:
         send_message(f"Damn you, {user.first_name}! This is not the time to "
@@ -164,9 +160,8 @@ def play_game_callback(update, context):
                 player.add_card(card)
                 print(card.game_id)
 
-        # dixit_game.storyteller = 0 # por que não já deixar o valor padrão 0?
-        dixit_game.storyteller = randrange(len(dixit_game.players))
-        dixit_game.next_stage()
+        dixit_game.storyteller = choice(dixit_game.players)
+        dixit_game.stage = 1
         send_message(f"The game has begun!", update, context)
         storytellers_turn(update, context)
 
@@ -174,9 +169,7 @@ def play_game_callback(update, context):
 def storytellers_turn(update, context):
     print("\n\nWe're now in stage 1: Storyteller's turn!\n")
     dixit_game = context.chat_data['dixit_game']
-    assert dixit_game.stage == 1, "We're not in the storyteller's turn!"
-    storyteller = dixit_game.players[dixit_game.storyteller]
-    send_message(f'{storyteller.name} is the storyteller!\n'
+    send_message(f'{dixit_game.storyteller.name} is the storyteller!\n'
                  'Please write a hint and click on a card.', update, context)
 
 
@@ -189,9 +182,9 @@ def inline_callback(update, context):
     dixit_game_dict = find_user_games(context, user)
     if len(dixit_game_dict) == 1:
         dixit_game = list(dixit_game_dict.values())[0]
-        player_index = dixit_game.get_user_list().index(user)
+        player_index = dixit_game.users.index(user)
         player = dixit_game.players[player_index]
-        storyteller = dixit_game.players[dixit_game.storyteller]
+        storyteller = dixit_game.storyteller
         print(f'Inline from {player_index=}, {user.id=}, {user.first_name=}')
         print(f'player is storyteller: {player==storyteller}')
 
@@ -247,7 +240,6 @@ def parse_cards(update, context):
     card_sent = [c for c in dixit_game.cards if c.game_id == card_id][0]
 
     if dixit_game.stage == 1:
-        dixit_game.storyteller_card = card_id
         if len(clue) != 1:
             send_message(f'You forgot to give us a clue!', update, context)
             return
@@ -284,8 +276,7 @@ def end_of_round(update, context):
     dixit_game = context.chat_data['dixit_game']
     round_results = count_points(dixit_game)
 
-    storyteller = dixit_game.players[dixit_game.storyteller]
-    storyteller_card = dixit_game.table[storyteller.user.id]
+    storyteller_card = dixit_game.table[dixit_game.storyteller.user.id]
 
     send_message(f'the correct answer was...', update, context)
     send_message(dixit_game.clue, update, context)
