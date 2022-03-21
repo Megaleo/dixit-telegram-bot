@@ -2,7 +2,7 @@ from telegram import Update, InlineQueryResultPhoto, InputTextMessageContent
 from telegram.ext import (Updater, CallbackContext, CommandHandler,
                           InlineQueryHandler, MessageHandler, Filters)
 from uuid import uuid4
-from random import choices, shuffle, randrange
+from random import choice, choices, shuffle, randrange
 import sys
 import logging
 
@@ -10,6 +10,17 @@ import game
 
 # Following tutorial in
 # https://github.com/python-telegram-bot/python-telegram-bot-wiki/Extensions-%E2%80%93-Your-first-Bot
+
+
+def send_message(text, update, context, **kwargs):
+    '''Sends message to group chat specified in update'''
+    context.bot.send_message(chat_id=update.effective_chat.id, text=text,
+                             **kwargs)
+
+def send_photo(photo_url, update, context, **kwargs):
+    '''Sends photo to group chat specified in update.'''
+    context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo_url,
+                           **kwargs)
 
 def get_active_games(context):
     '''Returns all `DixitGame`'s that are in `context.dispatcher.chat_data`
@@ -36,7 +47,7 @@ def find_user_games(context, user):
     game they want to play at that time like the unobot does.'''
     return {chat_id: dixit_game
             for chat_id, dixit_game in get_active_games(context).items()
-            if user in dixit_game.get_user_list()}
+            if user in dixit_game.users}
 
 
 def ensure_game(callback):
@@ -45,12 +56,10 @@ def ensure_game(callback):
         # Checks if there is an ongoing game
         user = update.message.from_user
         if 'dixit_game' not in context.chat_data.keys():
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=f"Damn you, {user.first_name}! "
-                                     "First, start a game with /startgame!")
+            send_message(f"Damn you, {user.first_name}! First, start a game "
+                          "with /startgame!", update, context)
         else:
             return callback(update, context)
-
     return safe_callback
 
 
@@ -59,12 +68,10 @@ def ensure_user_inactive(callback):
     def safe_callback(update, context):
         user = update.message.from_user
         if find_user_games(context, user):
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=f"Damn you, {user.first_name}! "
-                                     "You are in another game already!")
+            send_message(f"Damn you, {user.first_name}! You are in another "
+                          "game already!", update, context)
         else:
             return callback(update, context)
-
     return safe_callback
 
 
@@ -86,27 +93,21 @@ def start_game_callback(update, context):
     print("\n\nWe're now in stage 0: Lobby!\n")
     # Checks if there is no ongoing game
     if 'dixit_game' in context.chat_data:
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text=f"Damn you, {user.first_name}! "
-                                       "There is a game in progress already!")
+        send_message(f"Damn you, {user.first_name}! There is a game in "
+                      "progress already!", update, context)
     else:
         game_id_list = list(range(1, 101))
         shuffle(game_id_list) # Permutates the game_id of the cards at random
         cards = [game.image_dixit_github(n, game_id_list[n-1])
                  for n in range(1, 101)]
         shuffle(cards)
-        dixit_game = game.DixitGame(cards=cards, 
-                                    chat_id=update.effective_chat.id)
+        dixit_game = game.DixitGame(cards=cards) 
         context.chat_data['dixit_game'] = dixit_game
 
-        context.chat_data['master'] = user # Sets master
-        master_player = game.Player(user)
-        dixit_game.add_player(master_player)
+        dixit_game.add_player(user) # first player is automatically master
 
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text="Let's play Dixit!\n"
-                                     f"The master {user.first_name} "
-                                      "has started a game.")
+        send_message(f"Let's play Dixit!\nThe master {user.first_name} "
+                      "has started a game.", update, context)
 
 @ensure_game
 @ensure_user_inactive
@@ -115,77 +116,61 @@ def join_game_callback(update, context):
     1. Checks if user has already joined the game
     1.1. If not, adds user who called it to the game's players list'''
     dixit_game = context.chat_data['dixit_game']
-    n_supported_players = len(dixit_game.cards)//dixit_game.cards_per_player
     user = update.message.from_user
     print(f'Entrou: {user.first_name=}, {user.id=}')
-    if user in dixit_game.get_user_list():
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text=f"Damn you, {user.first_name}! "
-                                       "You have already joined the game!")
+    if user in dixit_game.users:
+        send_message(f"Damn you, {user.first_name}! You have already joined "
+                      "the game!", update, context)
     # Checks if there are enough cards for user to join
-    elif len(dixit_game.players) >= n_supported_players:
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text="There are only enough cards in the"
-                                     f"game to supply {n_supported_players} "
-                                     "players, unfortunately!")
-            # ask if they'd like to play with fewer cards per player?
+    elif len(dixit_game.players) >= dixit_game.max_players:
+        send_message("There are only enough cards in the game to supply "
+                     f"{dixit_game.max_players} players, unfortunately!", 
+                     update, context)
+        # ask if they'd like to play with fewer cards per player?
     else:
-        player = game.Player(user)
-        dixit_game.add_player(player)
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text=f"{user.first_name} was added to the game!"
-                                 )
+        dixit_game.add_player(user)
+        send_message(f"{user.first_name} was added to the game!", 
+                     update, context)
 
 @ensure_game
 def play_game_callback(update, context):
     '''Command callback. When /playgame is called, it does the following:
     1. Distributes cards to players;
-    2. Chooses storyteller = 0 (the first player to join);
+    2. Chooses random storyteller
     3. (For later) Messages button to prompt inline query;
     4. Goes from stage 0 to 1.'''
     dixit_game = context.chat_data['dixit_game']
-    master = context.chat_data['master']
+    master = dixit_game.master
     user = update.message.from_user
     # Checks if it was the master who requested /playgame
-    if user != master:
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text=f"Damn you, {user.first_name}! "
-                                 "You are not the master {master.first_name}!")
+    if user != master.user:
+        send_message(f"Damn you, {user.first_name}! You are not the master "
+                     f"{master.name}!", update, context)
     # Check if the game hadn't been started before
     elif dixit_game.stage != 0:
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text=f"Damn you, {user.first_name}! This is "
-                                 "not the time to start playing the game!")
+        send_message(f"Damn you, {user.first_name}! This is not the time to "
+                     "start playing the game!", update, context)
     else:
         # Distribute cards here
         dealer_cards = dixit_game.dealer_cards
         for player in dixit_game.players:
             print(f'giving cards to {player.name}')
             for _ in range(dixit_game.cards_per_player): # 6 cards per player
-                # card_index = randrange(len(dealer_cards))
-                # card = dealer_cards.pop(card_index)
-                # player.add_card(card)
                 card = dealer_cards.pop()
-                print(card.game_id)
                 player.add_card(card)
+                print(card.game_id)
 
-        # dixit_game.storyteller = 0 # por que não já deixar o valor padrão 0?
-        dixit_game.storyteller = randrange(len(dixit_game.players))
-        dixit_game.next_stage()
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text=f"The game has begun!")
+        dixit_game.storyteller = choice(dixit_game.players)
+        dixit_game.stage = 1
+        send_message(f"The game has begun!", update, context)
         storytellers_turn(update, context)
 
 
 def storytellers_turn(update, context):
     print("\n\nWe're now in stage 1: Storyteller's turn!\n")
     dixit_game = context.chat_data['dixit_game']
-    assert dixit_game.stage == 1, "We're not in the storyteller's turn!"
-    storyteller = dixit_game.players[dixit_game.storyteller]
-    context.bot.send_message(chat_id=update.effective_chat.id,
-                             text=f'{storyteller.name} is the storyteller!\n'
-                             'Please write a hint and click on a card.'
-                             )
+    send_message(f'{dixit_game.storyteller.name} is the storyteller!\n'
+                 'Please write a hint and click on a card.', update, context)
 
 
 def inline_callback(update, context):
@@ -197,11 +182,11 @@ def inline_callback(update, context):
     dixit_game_dict = find_user_games(context, user)
     if len(dixit_game_dict) == 1:
         dixit_game = list(dixit_game_dict.values())[0]
-        player_index = dixit_game.get_user_list().index(user)
+        player_index = dixit_game.users.index(user)
         player = dixit_game.players[player_index]
-        storyteller = dixit_game.players[dixit_game.storyteller]
+        storyteller = dixit_game.storyteller
         print(f'Inline from {player_index=}, {user.id=}, {user.first_name=}')
-        print(f'{player==storyteller = }')
+        print(f'player is storyteller: {player==storyteller}')
 
         if dixit_game.stage==1 and player==storyteller:
             given_clue = update.inline_query.query
@@ -233,8 +218,8 @@ def inline_callback(update, context):
                        thumb_url = card.photo_id,
                        title = f"Chosen card {card.game_id}",
                        input_message_content = InputTextMessageContent(
-                       f"{user.id}:{card.game_id}"
-                       ))
+                       f"{user.id}:{card.game_id}")
+                       )
                        for card in dixit_game.table.values()]
         else:
             results = [] # gostaria de botar um texto, mas n vi como
@@ -255,18 +240,15 @@ def parse_cards(update, context):
     card_sent = [c for c in dixit_game.cards if c.game_id == card_id][0]
 
     if dixit_game.stage == 1:
-        dixit_game.storyteller_card = card_id
         if len(clue) != 1:
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=f'You forgot to give us a clue!')
+            send_message(f'You forgot to give us a clue!', update, context)
             return
         print(f'{clue[0]=}')
         dixit_game.clue = clue[0]
         dixit_game.table[user_id] = card_sent
         dixit_game.stage = 2
         print("\n\nWe're now in stage 2: others' turn!\n")
-        context.bot.send_message(chat_id=update.effective_chat.id,
-                                 text=f"Now, let the others send their cards!")
+        send_message(f"Now, let the others send their cards!", update, context)
 
     elif dixit_game.stage == 2:
         # allows players to overwrite the card sent
@@ -275,14 +257,12 @@ def parse_cards(update, context):
         print(f"There are ({len(dixit_game.table)}/"
               f"{len(dixit_game.players)}) cards on the table!")
         if len(dixit_game.table) == len(dixit_game.players):
-            # dixit_game.next_stage()
-            ##### descomente para enxer mesa até 6
+            ## descomente para encher mesa até 6
             # for i in range(6 - len(dixit_game.table)):
             #     dixit_game.table[i] = dixit_game.dealer_cards.pop()
             dixit_game.stage = 3
             print("\n\nWe're now in stage 3: Vote!\n")
-            context.bot.send_message(chat_id=update.effective_chat.id,
-                                     text=f"Time to vote!")
+            send_message(f"Time to vote!", update, context)
 
     elif dixit_game.stage == 3:
         print(f"I've received ({len(dixit_game.table)}/"
@@ -296,18 +276,15 @@ def end_of_round(update, context):
     dixit_game = context.chat_data['dixit_game']
     round_results = count_points(dixit_game)
 
-    storyteller = dixit_game.players[dixit_game.storyteller]
-    storyteller_card = dixit_game.table[storyteller.user.id]
+    storyteller_card = dixit_game.table[dixit_game.storyteller.user.id]
 
-    context.bot.send_message(chat_id=update.effective_chat.id,
-                             text=f'the correct answer was...')
-    context.bot.send_photo(chat_id=update.effective_chat.id,
-                           photo=storyteller_card.photo_id)
+    send_message(f'the correct answer was...', update, context)
+    send_message(dixit_game.clue, update, context)
+    send_photo(storyteller_card.photo_id, update, context)
     results = '\n'.join([f'{player.name} got {points} '
                          f'point{"s" if points!=1 else ""}!'
                          for player, points in round_results.items()])
-    context.bot.send_message(chat_id=update.effective_chat.id,
-                             text=results)
+    send_message(results, update, context)
     #TODO: sum points, reset variables, etc.
 
 

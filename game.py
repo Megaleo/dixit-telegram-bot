@@ -63,27 +63,23 @@ class DixitGame:
     def __init__(self,
                  stage: int = 0,
                  players: List[Player] = None,
-                 storyteller: Optional[int] = None,
+                 master: Player = None,
+                 storyteller: Player = None,
                  clue: Optional[str] = None,
                  cards: List[Card] = None,
-                 chosen_cards: List[int] = [], # list of game_id's
-                 table = None, # {player: Card} dict containing the played cards
-                 votes = None, #idem, containing each player's voted card
-                 storyteller_card: Optional[int] = None, # game_id of card
-                 cards_per_player: int = 6,
-                 chat_id = None,):
-        '''storyteller should be an integer indicating the index of the player
-        in the list 'players' that is the storyteller'''
+                 table = None, # {Player: Card}, each player's played card
+                 votes = None, # {Player: Card}, each player's voted card
+                 ):
         self.stage = stage
         self.players = players or []
-        self.storyteller = storyteller
+        self._storyteller = storyteller
+        self.master = master
         self.clue = clue
         self.cards = cards or []
-        self.cards_per_player = cards_per_player
         self.table = table or {}
         self.votes = votes or {}
-        self.chat_id = chat_id
-        self.dealer_cards = self.cards.copy()
+        self._dealer_cards = None
+        self.cards_per_player = 6
 
     @property
     def stage(self):
@@ -96,24 +92,36 @@ class DixitGame:
                               'should be between 0 and 3 (inclusive)')
         self._stage = val
 
-
     @property
     def storyteller(self):
         return self._storyteller
 
     @storyteller.setter
-    def storyteller(self, val: int):
-        if val is not None and val not in range(len(self.players)):
-            raise ValueError(f'There is no player in index {self.storyteller} '
-                             f'(maximum is {len(self.players)-1})')
-        self._storyteller = val
+    def storyteller(self, player):
+        if player not in self.players:
+            raise ValueError(f"There's no such player in the game!")
+        self._storyteller = player
     
+    @property
+    def max_players(self):
+        return len(self.cards)//self.cards_per_player
 
-    def add_player(self, player: Player):
-        self.players.append(player)
+    @property 
+    def dealer_cards(self):
+        if self._dealer_cards is None:
+            self._dealer_cards = self.cards.copy()
+        return self._dealer_cards
 
-    def get_user_list(self):
+    @property
+    def users(self):
         return [player.user for player in self.players]
+
+    def add_player(self, player):
+        if isinstance(player, User):
+            player = Player(player)
+        self.players.append(player)
+        self.master = self.master or player
+
 
     # usar self.get_user_list.index(user)?
     def find_player_by_user(self, user):
