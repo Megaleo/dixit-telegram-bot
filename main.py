@@ -145,7 +145,7 @@ def play_game_callback(update, context):
     # Checks if it was the master who requested /playgame
     if user != master.user:
         send_message(f"Damn you, {user.first_name}! You are not the master "
-                     f"{master.name}!", update, context)
+                     f"{master}!", update, context)
     # Check if the game hadn't been started before
     elif dixit_game.stage != 0:
         send_message(f"Damn you, {user.first_name}! This is not the time to "
@@ -154,7 +154,7 @@ def play_game_callback(update, context):
         # Distribute cards here
         dealer_cards = dixit_game.dealer_cards
         for player in dixit_game.players:
-            print(f'giving cards to {player.name}')
+            print(f'giving cards to {player}')
             for _ in range(dixit_game.cards_per_player): # 6 cards per player
                 card = dealer_cards.pop()
                 player.add_card(card)
@@ -169,7 +169,7 @@ def play_game_callback(update, context):
 def storytellers_turn(update, context):
     print("\n\nWe're now in stage 1: Storyteller's turn!\n")
     dixit_game = context.chat_data['dixit_game']
-    send_message(f'{dixit_game.storyteller.name} is the storyteller!\n'
+    send_message(f'{dixit_game.storyteller} is the storyteller!\n'
                  'Please write a hint and click on a card.', update, context)
 
 
@@ -237,6 +237,7 @@ def parse_cards(update, context):
     user_id, card_id = (int(i) for i in data.split(':'))
     print(f'Parsing {user_id=}, {card_id=}, {user.first_name=}, {user.id=}')
 
+    player = [p for p in dixit_game.players if p.user.id == user_id][0]
     card_sent = [c for c in dixit_game.cards if c.game_id == card_id][0]
 
     if dixit_game.stage == 1:
@@ -245,7 +246,7 @@ def parse_cards(update, context):
             return
         print(f'{clue[0]=}')
         dixit_game.clue = clue[0]
-        dixit_game.table[user_id] = card_sent
+        dixit_game.table[player] = card_sent
         dixit_game.stage = 2
         print("\n\nWe're now in stage 2: others' turn!\n")
         send_message(f"Now, let the others send their cards!", update, context)
@@ -253,7 +254,7 @@ def parse_cards(update, context):
     elif dixit_game.stage == 2:
         # allows players to overwrite the card sent
         # TODO: check that the card was indeed in the player's hand
-        dixit_game.table[user_id] = card_sent
+        dixit_game.table[player] = card_sent
         print(f"There are ({len(dixit_game.table)}/"
               f"{len(dixit_game.players)}) cards on the table!")
         if len(dixit_game.table) == len(dixit_game.players):
@@ -267,7 +268,7 @@ def parse_cards(update, context):
     elif dixit_game.stage == 3:
         print(f"I've received ({len(dixit_game.table)}/"
               f"{len(dixit_game.players) - 1}) votes")
-        dixit_game.votes[user_id] = card_sent
+        dixit_game.votes[player] = card_sent
         if len(dixit_game.votes) == len(dixit_game.players)-1:
             end_of_round(update, context)
 
@@ -276,12 +277,12 @@ def end_of_round(update, context):
     dixit_game = context.chat_data['dixit_game']
     round_results = count_points(dixit_game)
 
-    storyteller_card = dixit_game.table[dixit_game.storyteller.user.id]
+    storyteller_card = dixit_game.table[dixit_game.storyteller]
 
     send_message(f'the correct answer was...', update, context)
     send_message(dixit_game.clue, update, context)
     send_photo(storyteller_card.photo_id, update, context)
-    results = '\n'.join([f'{player.name} got {points} '
+    results = '\n'.join([f'{player} got {points} '
                          f'point{"s" if points!=1 else ""}!'
                          for player, points in round_results.items()])
     send_message(results, update, context)
