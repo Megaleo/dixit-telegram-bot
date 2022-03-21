@@ -297,6 +297,8 @@ def count_points(votes_by_player, storyteller):
     player_points = Counter(votes_by_player.values())
     storyteller_wins = len(votes_by_player) > player_points[storyteller] > 0
     player_points[storyteller] = 3 if storyteller_wins else 0 
+    for player, vote in votes_by_player.items():
+        player_points[player] += (2 + storyteller_wins)*(vote == storyteller)
     return player_points
 
 
