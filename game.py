@@ -33,6 +33,8 @@ class Card:
     def __eq__(self, other):
         return self.photo_id == other.photo_id and self.game_id == other.game_id
 
+    def __repr__(self):
+        return f'Card({self.photo_id = }, {self.game_id = })'
 
 def image_dixit_github(n: int, game_id: int):
     '''Fetches the n-th image from the github image repo and returns the
@@ -44,12 +46,13 @@ def image_dixit_github(n: int, game_id: int):
 
 class Player:
 
-    def __init__(self, user: User, hand_cards = []):
+    def __init__(self, user: User, hand_cards=None):
         '''user contains id and name. See
         https://python-telegram-bot.readthedocs.io/en/latest/telegram.user.html#telegram.User
         for more'''
         self.user = user
-        self.hand_cards = hand_cards
+        self.hand_cards = hand_cards or []
+        self.name = ' '.join(filter(bool, [user.first_name, user.last_name])) 
 
     def add_card(self, card):
         self.hand_cards.append(card)
@@ -59,21 +62,28 @@ class DixitGame:
 
     def __init__(self,
                  stage: int = 0,
-                 players: List[Player] = [],
+                 players: List[Player] = None,
                  storyteller: Optional[int] = None,
                  clue: Optional[str] = None,
-                 cards: List[Card] = [],
+                 cards: List[Card] = None,
                  chosen_cards: List[int] = [], # list of game_id's
+                 table = None, # {player: Card} dict containing the played cards
+                 votes = None, #idem, containing each player's voted card
                  storyteller_card: Optional[int] = None, # game_id of card
-                 cards_per_player: int = 6):
+                 cards_per_player: int = 6,
+                 chat_id = None,):
         '''storyteller should be an integer indicating the index of the player
         in the list 'players' that is the storyteller'''
         self.stage = stage
-        self.players = players
+        self.players = players or []
         self.storyteller = storyteller
         self.clue = clue
-        self.cards = cards
+        self.cards = cards or []
         self.cards_per_player = cards_per_player
+        self.table = table or {}
+        self.votes = votes or {}
+        self.chat_id = chat_id
+        self.dealer_cards = self.cards.copy()
 
     @property
     def stage(self):
@@ -88,7 +98,7 @@ class DixitGame:
 
 
     @property
-    def storyteller(self, val: int):
+    def storyteller(self):
         return self._storyteller
 
     @storyteller.setter

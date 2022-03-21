@@ -1,6 +1,6 @@
 from telegram import Update, InlineQueryResultPhoto, InputTextMessageContent
 from telegram.ext import (Updater, CallbackContext, CommandHandler,
-                          InlineQueryHandler)
+                          InlineQueryHandler, MessageHandler, Filters)
 from uuid import uuid4
 from random import choices, shuffle, randrange
 import sys
@@ -13,29 +13,31 @@ import game
 
 def get_active_games(context):
     '''Returns all `DixitGame`'s that are in `context.dispatcher.chat_data`
-    as a dict of chat_id : dixit_game'''
+    as a dict of chat_id: dixit_game'''
     # There must be a better way of doing this...
     # In Haskell, I would have used `mapMaybe dixit_game chat_data` or smth
     if context.dispatcher.chat_data:
-        dixit_game_dict = {chat_id : data['dixit_game']
-                           for chat_id, data in context.dispatcher.chat_data.items()
-                           if data.get('dixit_game', None)}
+        dixit_game_dict = {chat_id: data['dixit_game'] for chat_id, data in 
+                           context.dispatcher.chat_data.items()
+                           if 'dixit_game' in data}
         return dixit_game_dict
     else:
         return {}
 
+
 def find_user_games(context, user):
     '''Finds the `chat_id`'s of the games where the `user` is playing.
-    Returns a dict of chat_id : dixit_game
+    Returns a dict of chat_id: dixit_game
 
     This is useful to resolve the issue of the inline queries not having
     the information about the chat from which it is requested.
     With the information of the `chat_id`'s, we could either prohibit the
     player from playing multiple games at once, or give him the choice of which
     game they want to play at that time like the unobot does.'''
-    return {chat_id : dixit_game
+    return {chat_id: dixit_game
             for chat_id, dixit_game in get_active_games(context).items()
             if user in dixit_game.get_user_list()}
+
 
 def ensure_game(callback):
     """Decorator to ensure a game exists before callbacks are made"""
@@ -51,10 +53,10 @@ def ensure_game(callback):
 
     return safe_callback
 
+
 def ensure_user_inactive(callback):
     """Decorator to ensure the user is not in another game"""
     def safe_callback(update, context):
-        # Checks if there is an ongoing game
         user = update.message.from_user
         if find_user_games(context, user):
             context.bot.send_message(chat_id=update.effective_chat.id,
@@ -64,6 +66,7 @@ def ensure_user_inactive(callback):
             return callback(update, context)
 
     return safe_callback
+
 
 @ensure_user_inactive
 def start_game_callback(update, context):
@@ -79,8 +82,10 @@ def start_game_callback(update, context):
     4. Joins master user to the game IF they are not in other games
     '''
     user = update.message.from_user
+    print("################## GAME START ######################")
+    print("\n\nWe're now in stage 0: Lobby!\n")
     # Checks if there is no ongoing game
-    if 'dixit_game' in context.chat_data.keys():
+    if 'dixit_game' in context.chat_data:
         context.bot.send_message(chat_id=update.effective_chat.id,
                                  text=f"Damn you, {user.first_name}! "
                                        "There is a game in progress already!")
@@ -89,7 +94,9 @@ def start_game_callback(update, context):
         shuffle(game_id_list) # Permutates the game_id of the cards at random
         cards = [game.image_dixit_github(n, game_id_list[n-1])
                  for n in range(1, 101)]
-        dixit_game = game.DixitGame(cards=cards)
+        shuffle(cards)
+        dixit_game = game.DixitGame(cards=cards, 
+                                    chat_id=update.effective_chat.id)
         context.chat_data['dixit_game'] = dixit_game
 
         context.chat_data['master'] = user # Sets master
@@ -110,6 +117,7 @@ def join_game_callback(update, context):
     dixit_game = context.chat_data['dixit_game']
     n_supported_players = len(dixit_game.cards)//dixit_game.cards_per_player
     user = update.message.from_user
+    print(f'Entrou: {user.first_name=}, {user.id=}')
     if user in dixit_game.get_user_list():
         context.bot.send_message(chat_id=update.effective_chat.id,
                                  text=f"Damn you, {user.first_name}! "
@@ -143,23 +151,42 @@ def play_game_callback(update, context):
         context.bot.send_message(chat_id=update.effective_chat.id,
                                  text=f"Damn you, {user.first_name}! "
                                  "You are not the master {master.first_name}!")
+    # Check if the game hadn't been started before
     elif dixit_game.stage != 0:
         context.bot.send_message(chat_id=update.effective_chat.id,
                                  text=f"Damn you, {user.first_name}! This is "
                                  "not the time to start playing the game!")
     else:
         # Distribute cards here
-        dealer_cards = dixit_game.cards.copy()
+        dealer_cards = dixit_game.dealer_cards
         for player in dixit_game.players:
-            for i in range(dixit_game.cards_per_player): # 6 cards per player
-                card_index = randrange(len(dealer_cards))
-                card = dealer_cards.pop(card_index)
+            print(f'giving cards to {player.name}')
+            for _ in range(dixit_game.cards_per_player): # 6 cards per player
+                # card_index = randrange(len(dealer_cards))
+                # card = dealer_cards.pop(card_index)
+                # player.add_card(card)
+                card = dealer_cards.pop()
+                print(card.game_id)
                 player.add_card(card)
 
-        dixit_game.storyteller = 0 # por que não já deixar o valor padrão 0?
+        # dixit_game.storyteller = 0 # por que não já deixar o valor padrão 0?
+        dixit_game.storyteller = randrange(len(dixit_game.players))
         dixit_game.next_stage()
         context.bot.send_message(chat_id=update.effective_chat.id,
                                  text=f"The game has begun!")
+        storytellers_turn(update, context)
+
+
+def storytellers_turn(update, context):
+    print("\n\nWe're now in stage 1: Storyteller's turn!\n")
+    dixit_game = context.chat_data['dixit_game']
+    assert dixit_game.stage == 1, "We're not in the storyteller's turn!"
+    storyteller = dixit_game.players[dixit_game.storyteller]
+    context.bot.send_message(chat_id=update.effective_chat.id,
+                             text=f'{storyteller.name} is the storyteller!\n'
+                             'Please write a hint and click on a card.'
+                             )
+
 
 def inline_callback(update, context):
     '''Inline callback. It depends on the stage of the game:
@@ -172,18 +199,34 @@ def inline_callback(update, context):
         dixit_game = list(dixit_game_dict.values())[0]
         player_index = dixit_game.get_user_list().index(user)
         player = dixit_game.players[player_index]
-        if dixit_game.stage in [1, 2]:
+        storyteller = dixit_game.players[dixit_game.storyteller]
+        print(f'Inline from {player_index=}, {user.id=}, {user.first_name=}')
+        print(f'{player==storyteller = }')
+
+        if dixit_game.stage==1 and player==storyteller:
+            given_clue = update.inline_query.query
+            results = [InlineQueryResultPhoto(
+                       id = str(uuid4()),
+                       photo_url = card.photo_id,
+                       thumb_url = card.photo_id,
+                       title = f"Card {card.game_id} in the storyteller's hand",
+                       input_message_content = InputTextMessageContent(
+                           f'{user.id}:{card.game_id}\n' + given_clue)
+                       )
+                       for card in player.hand_cards]
+
+        elif dixit_game.stage==2 and player!=storyteller:
             results = [InlineQueryResultPhoto(
                        id = str(uuid4()),
                        photo_url = card.photo_id,
                        thumb_url = card.photo_id,
                        title = f"Card {card.game_id} in the player's hand",
                        input_message_content = InputTextMessageContent(
-                       f"{user.id}:{card.game_id}"
-                       ))
+                       f"{user.id}:{card.game_id}")
+                       )
                        for card in player.hand_cards]
 
-        elif dixit_game.stage == 3:
+        elif dixit_game.stage==3 and player!=storyteller:
             results = [InlineQueryResultPhoto(
                        id = str(uuid4()),
                        photo_url = card.photo_id,
@@ -192,11 +235,89 @@ def inline_callback(update, context):
                        input_message_content = InputTextMessageContent(
                        f"{user.id}:{card.game_id}"
                        ))
-                       for card in dixit_game.chosen_cards]
+                       for card in dixit_game.table.values()]
         else:
             results = [] # gostaria de botar um texto, mas n vi como
 
         update.inline_query.answer(results)
+
+
+def parse_cards(update, context):
+    '''Parses the user messages looking for the played cards'''
+    dixit_game = context.chat_data['dixit_game']
+    user = update.message.from_user
+    text = update.message.text
+
+    data, *clue = text.split('\n', maxsplit=1)
+    user_id, card_id = (int(i) for i in data.split(':'))
+    print(f'Parsing {user_id=}, {card_id=}, {user.first_name=}, {user.id=}')
+
+    card_sent = [c for c in dixit_game.cards if c.game_id == card_id][0]
+
+    if dixit_game.stage == 1:
+        dixit_game.storyteller_card = card_id
+        if len(clue) != 1:
+            context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text=f'You forgot to give us a clue!')
+            return
+        print(f'{clue[0]=}')
+        dixit_game.clue = clue[0]
+        dixit_game.table[user_id] = card_sent
+        dixit_game.stage = 2
+        print("\n\nWe're now in stage 2: others' turn!\n")
+        context.bot.send_message(chat_id=update.effective_chat.id,
+                                 text=f"Now, let the others send their cards!")
+        return
+
+    if dixit_game.stage == 2:
+        # allows players to overwrite the card sent
+        # TODO: check that the card was indeed in the player's hand
+        dixit_game.table[user_id] = card_sent
+        print(f"There are ({len(dixit_game.table)}/"
+              f"{len(dixit_game.players)}) cards on the table!")
+        if len(dixit_game.table) == len(dixit_game.players):
+            # dixit_game.next_stage()
+            ##### descomente para enxer mesa até 6
+            # for i in range(6 - len(dixit_game.table)):
+            #     dixit_game.table[i] = dixit_game.dealer_cards.pop()
+            dixit_game.stage = 3
+            print("\n\nWe're now in stage 3: Vote!\n")
+            context.bot.send_message(chat_id=update.effective_chat.id,
+                                     text=f"Time to vote!")
+        return
+
+    if dixit_game.stage == 3:
+        print(f"I've received ({len(dixit_game.table)}/"
+              f"{len(dixit_game.players) - 1}) votes")
+        dixit_game.votes[user_id] = card_sent
+        if len(dixit_game.votes) == len(dixit_game.players)-1:
+            end_of_round(update, context)
+        return
+
+
+def end_of_round(update, context):
+    dixit_game = context.chat_data['dixit_game']
+    round_results = count_points(dixit_game)
+
+    storyteller = dixit_game.players[dixit_game.storyteller]
+    storyteller_card = dixit_game.table[storyteller.user.id]
+
+    context.bot.send_message(chat_id=update.effective_chat.id,
+                             text=f'the correct answer was...')
+    context.bot.send_photo(chat_id=update.effective_chat.id,
+                           photo=storyteller_card.photo_id)
+    results = '\n'.join([f'{player.name} got {points} '
+                         f'point{"s" if points!=1 else ""}!'
+                         for player, points in round_results.items()])
+    context.bot.send_message(chat_id=update.effective_chat.id,
+                             text=results)
+    #TODO: sum points, reset variables, etc.
+
+
+def count_points(dixit_game):
+    #TODO
+    return dict.fromkeys(dixit_game.players, 1)
+
 
 def run_bot(token):
     updater = Updater(token, use_context=True)
@@ -213,10 +334,17 @@ def run_bot(token):
     inline_handler = InlineQueryHandler(inline_callback)
     dispatcher.add_handler(inline_handler)
 
+    # Add messages handler, to parse the card ids sent by the player
+    pattern = r'^\d+:\d+(?:\n.*)?$'
+    message_handler = MessageHandler(Filters.regex(pattern), parse_cards)
+    # I don't know why, but Filter.via_bot() isn't letting it pass...
+    dispatcher.add_handler(message_handler)
+
     # Start the bot
     updater.start_polling()
 
     updater.idle()
+
 
 if __name__ == '__main__':
     logging_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
