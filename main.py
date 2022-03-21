@@ -3,8 +3,8 @@ from telegram.ext import (Updater, CallbackContext, CommandHandler,
                           InlineQueryHandler, MessageHandler, Filters)
 from uuid import uuid4
 from random import choice, choices, shuffle, randrange
-import sys
 import logging
+from collections import Counter
 
 import game
 
@@ -275,7 +275,10 @@ def parse_cards(update, context):
 
 def end_of_round(update, context):
     dixit_game = context.chat_data['dixit_game']
-    round_results = count_points(dixit_game)
+    players, cards = zip(*dixit_game.table.items())
+    votes_by_player = {voter: players[cards.index(card)] 
+                      for voter, card in dixit_game.votes.items()}
+    round_results = count_points(votes_by_player, dixit_game.storyteller)
 
     storyteller_card = dixit_game.table[dixit_game.storyteller]
 
@@ -289,9 +292,12 @@ def end_of_round(update, context):
     #TODO: sum points, reset variables, etc.
 
 
-def count_points(dixit_game):
-    #TODO
-    return dict.fromkeys(dixit_game.players, 1)
+def count_points(votes_by_player, storyteller):
+    '''Implements traditional Dixit point counting'''
+    player_points = Counter(votes_by_player.values())
+    storyteller_wins = len(votes_by_player) > player_points[storyteller] > 0
+    player_points[storyteller] = 3 if storyteller_wins else 0 
+    return player_points
 
 
 def run_bot(token):
