@@ -15,11 +15,27 @@
 # 3 : Players other than the storyteller choose their option
 # (Show results of the game with points to each one)
 #
-# TODO:
-# - Discard pile of cards
 
 from typing import Optional, List, Mapping
 from telegram import User
+
+'''
+TODO
+
+[ ] Discard pile of cards (?)
+
+[ ] Use (Int?)Enums to represent the stages of the game
+
+[ ] End game: restart variables, accumulate points, etc.
+
+[ ] Move all DixitGame-related operations when a new stage is started currently
+    in main.py to methods of the class itself (DixitGame.voting_turn(),
+    DixitGame.storyteller_turn(), etc.)
+
+[ ] Store game history for future analysis?
+'''
+
+
 
 class Card:
     def __init__(self, photo_id: int, game_id: int):

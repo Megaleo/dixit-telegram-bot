@@ -8,6 +8,24 @@ from collections import Counter
 
 import game
 
+'''
+TODO
+
+[ ] End game: ask Master whether to end game or not
+
+[ ] Improve the way results are shown; one of the fun parts of dixit is
+    discussing whose answer each person has chosen
+
+[ ] Force InlineQuery to discard its cache and update itself even on empty
+    queries
+
+[ ] Confirm that player's chosen cards were available for choosing, at every
+    stage
+
+[ ] Show user buttons to direct him to his cards automatically (vide Uno_Bot)
+'''
+
+
 # Following tutorial in
 # https://github.com/python-telegram-bot/python-telegram-bot-wiki/Extensions-%E2%80%93-Your-first-Bot
 
@@ -253,7 +271,6 @@ def parse_cards(update, context):
 
     elif dixit_game.stage == 2:
         # allows players to overwrite the card sent
-        # TODO: check that the card was indeed in the player's hand
         dixit_game.table[player] = card_sent
         logging.info(f"There are ({len(dixit_game.table)}/"
               f"{len(dixit_game.players)}) cards on the table!")
@@ -266,7 +283,7 @@ def parse_cards(update, context):
             send_message(f"Time to vote!", update, context)
 
     elif dixit_game.stage == 3:
-        logging.info(f"I've received ({len(dixit_game.table)}/"
+        logging.info(f"I've received ({len(dixit_game.votes)}/"
               f"{len(dixit_game.players) - 1}) votes")
         dixit_game.votes[player] = card_sent
         if len(dixit_game.votes) == len(dixit_game.players)-1:
@@ -289,7 +306,6 @@ def end_of_round(update, context):
                          f'point{"s" if points!=1 else ""}!'
                          for player, points in round_results.items()])
     send_message(results, update, context)
-    #TODO: sum points, reset variables, etc.
 
 
 def count_points(votes_by_player, storyteller):
