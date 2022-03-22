@@ -18,7 +18,7 @@
 # TODO:
 # - Discard pile of cards
 
-from typing import Optional, List
+from typing import Optional, List, Mapping
 from telegram import User
 
 class Card:
@@ -50,7 +50,7 @@ class Player:
         for more'''
         self.user = user
         self.hand_cards = hand_cards or []
-        self.name = ' '.join(filter(bool, [user.first_name, user.last_name])) 
+        self.name = ' '.join(filter(bool, [user.first_name, user.last_name]))
 
     def __repr__(self):
         return f'Player({self.name=}, {self.user.id=})'
@@ -60,7 +60,7 @@ class Player:
 
     def __eq__(self, other):
         return self.user.id == other.user.id
-    
+
     def __hash__(self):
         return self.user.id
 
@@ -72,15 +72,15 @@ class DixitGame:
 
     def __init__(self,
                  stage: int = 0,
-                 players: List[Player] = None,
-                 master: Player = None,
-                 storyteller: Player = None,
-                 clue: Optional[str] = None,
+                 players: Optional[Player] = None,
+                 master: Optional[Player] = None,
+                 storyteller: Optional[Player] = None,
+                 clue: List[str] = None,
                  cards: List[Card] = None,
-                 table = None, # {Player: Card}, each player's played card
-                 votes = None, # {Player: Card}, each player's voted card
+                 table: Mapping[Player, Card] = None, # Players' played cards
+                 votes: Mapping[Player, Card] = None, # Players' voted cards
                  ):
-        self.stage = stage
+        self._stage = stage
         self.players = players or []
         self._storyteller = storyteller
         self.master = master
@@ -111,12 +111,12 @@ class DixitGame:
         if player not in self.players:
             raise ValueError(f"There's no such player in the game!")
         self._storyteller = player
-    
+
     @property
     def max_players(self):
         return len(self.cards)//self.cards_per_player
 
-    @property 
+    @property
     def dealer_cards(self):
         if self._dealer_cards is None:
             self._dealer_cards = self.cards.copy()
