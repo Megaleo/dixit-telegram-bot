@@ -25,6 +25,9 @@ TODO
 
 [ ] Have the bot reply to the relevant message, instead of sending simple
     messages, when appropriate
+
+[ ] Have dummy players to better debug the game alone. They would not be
+    storytellers, but could just always choose a random card when playing/voting.
 '''
 
 
@@ -36,12 +39,14 @@ def send_message(text, update, context, **kwargs):
     '''Sends message to group chat specified in update and logs that'''
     context.bot.send_message(chat_id=update.effective_chat.id, text=text,
                              **kwargs)
+    logging.debug(f'Sent message \"{text}\" to chat {update.effective_chat.id=}')
 
 
 def send_photo(photo_url, update, context, **kwargs):
     '''Sends photo to group chat specified in update and logs that.'''
     context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo_url,
                            **kwargs)
+    logging.debug(f'Sent message \"{text}\" to chat {update.effective_chat.id=}')
 
 
 def get_active_games(context):
@@ -246,6 +251,24 @@ def inline_callback(update, context):
     update.inline_query.answer(results)
 
 
+def end_of_round(update, context):
+    dixit_game = context.chat_data['dixit_game']
+
+    round_results = dixit_game.count_points()
+    storyteller_card = dixit_game.table[dixit_game.storyteller]
+
+    send_message(f'the correct answer was...', update, context)
+    send_message(dixit_game.clue, update, context)
+    send_photo(storyteller_card.url, update, context)
+    results = '\n'.join([f'{player} got {points} '
+                         f'point{"s" if points!=1 else ""}!'
+                         for player, points in round_results.items()])
+    send_message(results, update, context)
+
+    dixit_game.new_round()
+    storytellers_turn(update, context)
+
+
 def parse_cards(update, context):
     '''parses the user messages looking for the played cards'''
     dixit_game = context.chat_data['dixit_game']
@@ -295,7 +318,7 @@ def parse_cards(update, context):
 
     elif dixit_game.stage == 3:
         try:
-            [sender] = [p for p in dixit_game.players 
+            [sender] = [p for p in dixit_game.players
                         if dixit_game.table[p]==card_sent]
         except:
             send_message('This card belongs to no one, {player}!')
@@ -306,24 +329,6 @@ def parse_cards(update, context):
                      f"{len(dixit_game.players) - 1}) votes")
         if len(dixit_game.votes) == len(dixit_game.players)-1:
             end_of_round(update, context)
-
-
-def end_of_round(update, context):
-    dixit_game = context.chat_data['dixit_game']
-
-    round_results = dixit_game.count_points()
-    storyteller_card = dixit_game.table[dixit_game.storyteller]
-
-    send_message(f'the correct answer was...', update, context)
-    send_message(dixit_game.clue, update, context)
-    send_photo(storyteller_card.url, update, context)
-    results = '\n'.join([f'{player} got {points} '
-                         f'point{"s" if points!=1 else ""}!'
-                         for player, points in round_results.items()])
-    send_message(results, update, context)
-
-    dixit_game.new_round()
-    storytellers_turn(update, context)
 
 
 def run_bot(token):
@@ -355,7 +360,7 @@ def run_bot(token):
 
 if __name__ == '__main__':
     logging_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    logging.basicConfig(format=logging_format, level=logging.INFO)
+    logging.basicConfig(format=logging_format, level=logging.DEBUG)
     with open('token.txt', 'r') as token_file:
         token = token_file.readline().strip() # Remove \n at the end
         run_bot(token)
