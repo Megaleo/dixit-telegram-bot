@@ -120,7 +120,7 @@ class DixitGame:
         self.cards = cards or []
         self.table = table or {}
         self.votes = votes or {}
-        self._dealer_cards = None
+        self._draw_pile = None
         self.cards_per_player = 6
         self.discard_pile = []
         self.score = dict.fromkeys(self.players, 0)
@@ -150,10 +150,10 @@ class DixitGame:
         return len(self.cards)//self.cards_per_player
 
     @property
-    def dealer_cards(self):
-        if self._dealer_cards is None:
-            self._dealer_cards = self.cards.copy()
-        return self._dealer_cards
+    def draw_pile(self):
+        if self._draw_pile is None:
+            self._draw_pile = self.cards.copy()
+        return self._draw_pile
 
     @property
     def users(self):
@@ -177,10 +177,10 @@ class DixitGame:
         return game
     
     def play_game(self):
-        dealer_cards = self.dealer_cards
+        draw_pile = self.draw_pile
         for player in self.players:
             for _ in range(self.cards_per_player): # 6 cards per player
-                card = dealer_cards.pop()
+                card = draw_pile.pop()
                 player.add_card(card)
 
         self.storyteller = choice(self.players)
@@ -197,7 +197,7 @@ class DixitGame:
         if len(self.table) == len(self.players):
             ## descomente para encher mesa até 6
             # for i in range(6 - len(self.table)):
-            #     self.table[i] = self.dealer_cards.pop()
+            #     self.table[i] = self.draw_pile.pop()
             self.stage = Stage.VOTE
 
     def voting_turns(self, player, vote):
@@ -220,16 +220,16 @@ class DixitGame:
         ST_i = self.players.index(self.storyteller)
         self.storyteller = self.players[(ST_i + 1) % len(self.players)]
         
-        if len(self.dealer_cards) < len(self.players): # if not enough cards
+        if len(self.draw_pile) < len(self.players): # if not enough cards
             shuffle(self.discard_pile)
-            self.dealer_cards.extend(self.discard_pile)
+            self.draw_pile.extend(self.discard_pile)
             self.discard_pile.clear()
 
         for player in self.players:
             self.score.setdefault(player, 0)
             self.score[player] += self.results.get(player, 0)
 
-            player.add_card(self.dealer_cards.pop())
+            player.add_card(self.draw_pile.pop())
 
         self.results = None
         self.table.clear()
