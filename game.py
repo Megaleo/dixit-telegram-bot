@@ -18,6 +18,8 @@
 
 from typing import Optional, List, Mapping
 from telegram import User
+from collections import Counter
+from random import shuffle, choice
 
 '''
 TODO
@@ -31,6 +33,13 @@ TODO
 [ ] Move all DixitGame-related operations when a new stage is started currently
     in main.py to methods of the class itself (DixitGame.voting_turn(),
     DixitGame.storyteller_turn(), etc.)
+    [X] start_game()
+    [X] play_game()
+    [X] storytellers_turn()
+    [X] player_turns()
+    [X] voting_turns()
+    [X] count_points()
+    [ ] others?
 
 [ ] Store game history for future analysis?
 '''
@@ -38,35 +47,35 @@ TODO
 
 
 class Card:
-    def __init__(self, photo_id: int, game_id: int):
-        '''photo_id is the id of the photo in Telegram's cache (or,
+    def __init__(self, image_id: int, _id: int):
+        '''image_id is the id of the card's image in Telegram's cache (or,
         temporarily, on the web)
-        game_id is used by the bot to know which card each player has chosen'''
-        self.photo_id = photo_id
-        self.game_id = game_id
+        _id is used by the bot to know which card each player has chosen,
+        and is randomized every game'''
+        self.image_id = image_id
+        self.id = _id
 
     def __eq__(self, other):
-        return self.photo_id == other.photo_id and self.game_id == other.game_id
+        return (self.image_id, self.id) == (other.image_id, other.id)
 
     def __repr__(self):
-        return f'Card({self.photo_id = }, {self.game_id = })'
+        return f'Card({self.image_id = }, {self.id = })'
 
-def image_dixit_github(n: int, game_id: int):
-    '''Fetches the n-th image from the github image repo and returns the
-    associated Card class'''
-    url_imagem = 'https://raw.githubusercontent.com/jminuscula/'\
-                 + f'dixit-online/master/cards/card_{n:0>5}.jpg'
-    return Card(url_imagem, game_id)
+    @property
+    def url(self):
+        return 'https://raw.githubusercontent.com/jminuscula/dixit-online/'\
+               + f'master/cards/card_{self.image_id:0>5}.jpg'
 
 
 class Player:
-    def __init__(self, user: User, hand_cards=None):
+    def __init__(self, user: User, hand=None):
         '''user contains id and name. See
         https://python-telegram-bot.readthedocs.io/en/latest/telegram.user.html#telegram.User
         for more'''
         self.user = user
-        self.hand_cards = hand_cards or []
+        self.hand = hand or []
         self.name = ' '.join(filter(bool, [user.first_name, user.last_name]))
+        self.id = self.user.id
 
     def __repr__(self):
         return f'Player({self.name=}, {self.user.id=})'
@@ -75,17 +84,18 @@ class Player:
         return self.name
 
     def __eq__(self, other):
+        # we could change self.user.id to self.id, so as to be able to compare
+        # Players and Users, but it can get messy
         return self.user.id == other.user.id
 
     def __hash__(self):
-        return self.user.id
+        return self.id
 
     def add_card(self, card):
-        self.hand_cards.append(card)
+        self.hand.append(card)
 
 
 class DixitGame:
-
     def __init__(self,
                  stage: int = 0,
                  players: Optional[Player] = None,
@@ -94,7 +104,7 @@ class DixitGame:
                  clue: List[str] = None,
                  cards: List[Card] = None,
                  table: Mapping[Player, Card] = None, # Players' played cards
-                 votes: Mapping[Player, Card] = None, # Players' voted cards
+                 votes: Mapping[Player, Player] = None, # Players' voted storytll
                  ):
         self._stage = stage
         self.players = players or []
@@ -143,28 +153,58 @@ class DixitGame:
         return [player.user for player in self.players]
 
     def add_player(self, player):
+        '''adds player to game. Makes it master if there wasn't one'''
         if isinstance(player, User):
             player = Player(player)
         self.players.append(player)
         self.master = self.master or player
 
+    @classmethod
+    def start_game(self, master):
+        game_ids = list(range(1, 101))
+        shuffle(game_ids)
+        cards = [Card(n, id_) for n, id_ in enumerate(game_ids, start=1)]
+        shuffle(cards)
+        game = self(cards=cards)
+        game.add_player(master) # first player automatically master
+        return game
+    
+    def play_game(self):
+        dealer_cards = self.dealer_cards
+        for player in self.players:
+            for _ in range(self.cards_per_player): # 6 cards per player
+                card = dealer_cards.pop()
+                player.add_card(card)
 
-    ## A SER DEPRECADOS
-    # # usar self.get_user_list.index(user)?
-    # def find_player_by_user(self, user):
-    #     '''Finds player by user. If not, returns ValueError'''
-    #     for index, player in enumerate(self.players):
-    #         if player.user == user:
-    #             return index
-    #     raise ValueError('No player found by user')
+        self.storyteller = choice(self.players)
+        self.stage = 1
+    
+    def storyteller_turn(self, card, clue):
+        self.clue = clue
+        self.table[self.storyteller] = card
+        self.stage = 2
 
-    # # [u.id for u in self.players].index(id)? Será que de fato reimplementamos?
-    # def find_player_by_id(self, user_id):
-    #     '''Finds player by user_id. If not, returns ValueError'''
-    #     for index, player in enumerate(self.players):
-    #         if player.user.id == user_id:
-    #             return index
-    #     raise ValueError('No player found by id')
+    def player_turns(self, player, card):
+        # allows players to overwrite the card sent
+        self.table[player] = card
+        if len(self.table) == len(self.players):
+            ## descomente para encher mesa até 6
+            # for i in range(6 - len(self.table)):
+            #     self.table[i] = self.dealer_cards.pop()
+            self.stage = 3
 
-    # def next_stage(self):
-    #     self.stage = (self.stage + 1) % 4
+    def voting_turns(self, player, vote):
+        self.votes[player] = vote
+
+    def count_points(self):
+        '''Implements traditional Dixit point counting'''
+        player_points = Counter(self.votes.values())
+        storyteller = self.storyteller
+        storytller_wins = len(self.votes) > player_points[storyteller] > 0
+        player_points[storyteller] = 3 if storyteller_wins else 0
+        for player, vote in self.votes.items():
+            player_points[player] += (2 + storyteller_wins)*(vote == storyteller)
+        return player_points
+
+
+
