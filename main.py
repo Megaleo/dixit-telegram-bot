@@ -1,7 +1,9 @@
-from telegram import Update, InlineQueryResultPhoto, InputTextMessageContent
+from telegram import (Update, InlineQueryResultPhoto, InputTextMessageContent,
+                      InlineKeyboardButton, InlineKeyboardMarkup)
 from telegram.ext import (Updater, CallbackContext, CommandHandler,
                           InlineQueryHandler, MessageHandler, Filters)
 from uuid import uuid4
+from random import randint
 import logging
 import functools
 
@@ -156,6 +158,22 @@ def join_game_callback(update, context):
     send_message(f"{user.first_name} was added to the game!", update, context)
 
 
+def storytellers_turn(update, context):
+    dixit_game = context.chat_data['dixit_game']
+    logging.info("We're now at stage 1: Storyteller's turn!")
+
+    dixit_game.play_game() # can no longer log the chosen cards!
+
+    # Button to switch to inline for the player to see their cards
+    inline_message = f"Choose your card above. Lucky number: {randint(0, 1000)}"
+    keyboard = [[InlineKeyboardButton("See your cards",
+                 switch_inline_query_current_chat=inline_message)]]
+    markup = InlineKeyboardMarkup(keyboard)
+    send_message(f'{dixit_game.storyteller} is the storyteller!\n'
+                 'Please write a hint and click on a card.', update, context,
+                 reply_markup=markup)
+
+
 @ensure_game(exists=True)
 def play_game_callback(update, context):
     '''Command callback. When /playgame is called, it does the following:
@@ -175,19 +193,8 @@ def play_game_callback(update, context):
         send_message(f"Damn you, {user.first_name}! This is not the time to "
                      "start playing the game!", update, context)
         return
-
     send_message(f"The game has begun!", update, context)
     storytellers_turn(update, context)
-
-
-def storytellers_turn(update, context):
-    dixit_game = context.chat_data['dixit_game']
-    logging.info("We're now at stage 1: Storyteller's turn!")
-
-    dixit_game.play_game() # can no longer log the chosen cards!
-
-    send_message(f'{dixit_game.storyteller} is the storyteller!\n'
-                 'Please write a hint and click on a card.', update, context)
 
 
 def inline_callback(update, context):
