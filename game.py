@@ -9,7 +9,7 @@
 #
 # 0 - LOBBY: Players entering the game/viewing results
 # 1 - STORYTELLER: Storyteller chooses a clue and a card.
-# 2 - PLAYERS: Each player chooses their card. They go to the table 
+# 2 - PLAYERS: Each player chooses their card. They go to the table
 # 3 - VOTE: Players other than the storyteller choose their option
 #
 # (Show results of the game with points to each one)
@@ -33,8 +33,8 @@ TODO
 [ ] Move all DixitGame-related operations when a new stage is started currently
     in main.py to methods of the class itself (DixitGame.voting_turn(),
     DixitGame.storyteller_turn(), etc.)
-    [X] start_game()
-    [X] play_game()
+    [X] start_game() (now new_game())
+    [X] play_game() (now start_game())
     [X] storytellers_turn()
     [X] player_turns()
     [X] voting_turns()
@@ -49,7 +49,7 @@ class Stage(IntEnum):
     LOBBY = 0
     STORYTELLER = 1
     PLAYERS = 2
-    VOTE = 3 
+    VOTE = 3
 
 
 class Card:
@@ -167,7 +167,7 @@ class DixitGame:
         self.master = self.master or player
 
     @classmethod
-    def start_game(self, master):
+    def new_game(self, master):
         game_ids = list(range(1, 101))
         shuffle(game_ids)
         cards = [Card(n, id_) for n, id_ in enumerate(game_ids, start=1)]
@@ -175,8 +175,8 @@ class DixitGame:
         game = self(cards=cards)
         game.add_player(master) # first player automatically master
         return game
-    
-    def play_game(self):
+
+    def start_game(self):
         draw_pile = self.draw_pile
         for player in self.players:
             for _ in range(self.cards_per_player): # 6 cards per player
@@ -185,11 +185,11 @@ class DixitGame:
 
         self.storyteller = choice(self.players)
         self.stage = Stage.STORYTELLER
-    
+
     def storyteller_turn(self, card, clue):
         self.clue = clue
         self.table[self.storyteller] = card
-        self.stage = Stage.PLAYERS 
+        self.stage = Stage.PLAYERS
 
     def player_turns(self, player, card):
         # allows players to overwrite the card sent
@@ -219,7 +219,7 @@ class DixitGame:
         self.discard_pile.extend(self.table.values())
         ST_i = self.players.index(self.storyteller)
         self.storyteller = self.players[(ST_i + 1) % len(self.players)]
-        
+
         if len(self.draw_pile) < len(self.players): # if not enough cards
             shuffle(self.discard_pile)
             self.draw_pile.extend(self.discard_pile)

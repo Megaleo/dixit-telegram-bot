@@ -83,8 +83,8 @@ def ensure_game(exists=True):
             user = update.message.from_user
             if ('dixit_game' in context.chat_data.keys()) != exists:
                 if exists:
-                    send_message(f"Damn you, {user.first_name}! First, start a "
-                                  "game with /startgame!", update, context)
+                    send_message(f"Damn you, {user.first_name}! First, create a "
+                                  "new game with /newgame!", update, context)
                 else:
                     send_message(f"Damn you, {user.first_name}! There's a game "
                                   "in progress already!", update, context)
@@ -109,8 +109,8 @@ def ensure_user_inactive(callback):
 
 @ensure_game(exists=False)
 @ensure_user_inactive
-def start_game_callback(update, context):
-    '''Command callback. When /startgame is called, it does the following:
+def new_game_callback(update, context):
+    '''Command callback. When /newgame is called, it does the following:
     1. Checks if there is an ongoing game
     1.1. If not, creates a default DixitGame instance and stores it in
         context.chat_data (See more about this in
@@ -123,15 +123,15 @@ def start_game_callback(update, context):
     '''
     user = update.message.from_user
 
-    logging.info("GAME START")
+    logging.info("NEW GAME")
     logging.info("We're now at stage 0: Lobby!")
 
-    dixit_game = DixitGame.start_game(master=user)
+    dixit_game = DixitGame.new_game(master=user)
 
     context.chat_data['dixit_game'] = dixit_game
     send_message(f"Let's play Dixit!\nThe master {dixit_game.master} "
-                  "has started a game. Click /joingame to join and "
-                  "/playgame to start playing!",
+                  "has created a new game. Click /joingame to join and "
+                  "/startgame to start playing!",
                   update, context)
 
 
@@ -161,26 +161,26 @@ def join_game_callback(update, context):
 
 
 @ensure_game(exists=True)
-def play_game_callback(update, context):
-    '''Command callback. When /playgame is called, it does the following:
+def start_game_callback(update, context):
+    '''Command callback. When /startgame is called, it does the following:
     1. Distributes cards to players;
     2. Chooses random storyteller
     3. (For later) Messages button to prompt inline query;
     4. Goes from stage 0 to 1.'''
     dixit_game = context.chat_data['dixit_game']
     user = update.message.from_user
-    # Checks if it was the master who requested /playgame
+    # Checks if it was the master who requested /startgame
     if user != dixit_game.master.user:
         send_message(f"Damn you, {user.first_name}! You are not the master "
                      f"{dixit_game.master}!", update, context)
         return
-    # Check if the game hadn't been started before
+    # Check if the game hadn't been created before
     if dixit_game.stage != 0:
         send_message(f"Damn you, {user.first_name}! This is not the time to "
-                     "start playing the game!", update, context)
+                     "create a new game!", update, context)
         return
     send_message(f"The game has begun!", update, context)
-    dixit_game.play_game() # can no longer log the chosen cards!
+    dixit_game.start_game() # can no longer log the chosen cards!
 
     storytellers_turn(update, context)
 
@@ -346,9 +346,9 @@ def run_bot(token):
     dispatcher = updater.dispatcher
 
     # Add commands handlers
-    command_callbacks = {'startgame': start_game_callback,
+    command_callbacks = {'newgame': new_game_callback,
                          'joingame': join_game_callback,
-                         'playgame': play_game_callback}
+                         'startgame': start_game_callback}
     for name, callback in command_callbacks.items():
         dispatcher.add_handler(CommandHandler(name, callback))
 
