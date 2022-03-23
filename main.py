@@ -36,16 +36,16 @@ def send_message(text, update, context, **kwargs):
     '''Sends message to group chat specified in update and logs that'''
     context.bot.send_message(chat_id=update.effective_chat.id, text=text,
                              **kwargs)
-    logging.debug(f'Sent message \"{text}\" to chat 
-                  {update.effective_chat.id=}')
+    logging.debug(f'Sent message \"{text}\" to chat '
+                  '{update.effective_chat.id=}')
 
 
 def send_photo(photo_url, update, context, **kwargs):
     '''Sends photo to group chat specified in update and logs that.'''
     context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo_url,
                            **kwargs)
-    logging.debug(f'Sent photo with url \"{photo_url}\" to chat 
-                  {update.effective_chat.id=}')
+    logging.debug(f'Sent photo with url \"{photo_url}\" to chat '
+                  '{update.effective_chat.id=}')
 
 
 def get_active_games(context):
@@ -160,22 +160,6 @@ def join_game_callback(update, context):
     send_message(f"{user.first_name} was added to the game!", update, context)
 
 
-def storytellers_turn(update, context):
-    dixit_game = context.chat_data['dixit_game']
-    logging.info("We're now at stage 1: Storyteller's turn!")
-
-    dixit_game.play_game() # can no longer log the chosen cards!
-
-    # Button to switch to inline for the player to see their cards
-    inline_message = f"Choose your card above. Lucky number: {randint(0, 1000)}"
-    keyboard = [[InlineKeyboardButton("See your cards",
-                 switch_inline_query_current_chat=inline_message)]]
-    markup = InlineKeyboardMarkup(keyboard)
-    send_message(f'{dixit_game.storyteller} is the storyteller!\n'
-                 'Please write a hint and click on a card.', update, context,
-                 reply_markup=markup)
-
-
 @ensure_game(exists=True)
 def play_game_callback(update, context):
     '''Command callback. When /playgame is called, it does the following:
@@ -196,7 +180,23 @@ def play_game_callback(update, context):
                      "start playing the game!", update, context)
         return
     send_message(f"The game has begun!", update, context)
+    dixit_game.play_game() # can no longer log the chosen cards!
+
     storytellers_turn(update, context)
+
+
+def storytellers_turn(update, context):
+    dixit_game = context.chat_data['dixit_game']
+    logging.info("We're now at stage 1: Storyteller's turn!")
+
+    # Button to switch to inline for the player to see their cards
+    inline_message = f"Choose your card above. Lucky number: {randint(0, 1000)}"
+    keyboard = [[InlineKeyboardButton("See your cards",
+                 switch_inline_query_current_chat=inline_message)]]
+    markup = InlineKeyboardMarkup(keyboard)
+    send_message(f'{dixit_game.storyteller} is the storyteller!\n'
+                 'Please write a hint and click on a card.', update, context,
+                 reply_markup=markup)
 
 
 def inline_callback(update, context):
