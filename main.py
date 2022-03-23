@@ -2,12 +2,10 @@ from telegram import Update, InlineQueryResultPhoto, InputTextMessageContent
 from telegram.ext import (Updater, CallbackContext, CommandHandler,
                           InlineQueryHandler, MessageHandler, Filters)
 from uuid import uuid4
-from random import choice, choices, shuffle, randrange
 import logging
 import functools
 
 from game import DixitGame
-import game
 
 '''
 TODO
@@ -39,16 +37,16 @@ def send_message(text, update, context, **kwargs):
     context.bot.send_message(chat_id=update.effective_chat.id, text=text,
                              **kwargs)
 
+
 def send_photo(photo_url, update, context, **kwargs):
     '''Sends photo to group chat specified in update and logs that.'''
     context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo_url,
                            **kwargs)
 
+
 def get_active_games(context):
     '''Returns all `DixitGame`'s that are in `context.dispatcher.chat_data`
     as a dict of chat_id: dixit_game'''
-    # There must be a better way of doing this...
-    # In Haskell, I would have used `mapMaybe dixit_game chat_data` or smth
     if (chat_data := context.dispatcher.chat_data):
         active_games = {chat_id: data['dixit_game'] for chat_id, data in
                         chat_data.items() if 'dixit_game' in data}
@@ -69,6 +67,7 @@ def find_user_games(context, user):
     return {chat_id: dixit_game
             for chat_id, dixit_game in get_active_games(context).items()
             if user in dixit_game.users}
+
 
 def ensure_game(exists=True):
     """Decorator to ensure a game exists before callbacks are made.
@@ -103,6 +102,7 @@ def ensure_user_inactive(callback):
             return callback(update, context)
     return safe_callback
 
+
 @ensure_game(exists=False)
 @ensure_user_inactive
 def start_game_callback(update, context):
@@ -128,6 +128,7 @@ def start_game_callback(update, context):
     send_message(f"Let's play Dixit!\nThe master {dixit_game.master} "
                   "has started a game.", update, context)
 
+
 @ensure_game(exists=True)
 @ensure_user_inactive
 def join_game_callback(update, context):
@@ -152,6 +153,7 @@ def join_game_callback(update, context):
     dixit_game.add_player(user)
     send_message(f"{user.first_name} was added to the game!", update, context)
 
+
 @ensure_game(exists=True)
 def play_game_callback(update, context):
     '''Command callback. When /playgame is called, it does the following:
@@ -172,13 +174,13 @@ def play_game_callback(update, context):
                      "start playing the game!", update, context)
         return
 
+    logging.info("We're now at stage 1: Storyteller's turn!")
+
     dixit_game.play_game() # can no longer log the chosen cards!
 
-    logging.info("We're now at stage 1: Storyteller's turn!")
     send_message(f"The game has begun!", update, context)
     send_message(f'{dixit_game.storyteller} is the storyteller!\n'
                  'Please write a hint and click on a card.', update, context)
-
 
 
 def inline_callback(update, context):
@@ -271,10 +273,10 @@ def parse_cards(update, context):
             return
         [clue] = clue
         logging.info(f'{clue=}')
+        logging.info("we're now at stage 2: others' turn!")
 
         dixit_game.storyteller_turn(card=card_sent, clue=clue)
 
-        logging.info("we're now at stage 2: others' turn!")
         send_message(f"now, let the others send their cards!", update, context)
 
     elif dixit_game.stage == 2:
@@ -288,7 +290,8 @@ def parse_cards(update, context):
 
     elif dixit_game.stage == 3:
         try:
-            [sender] = [p for p in dixit_game.players if dixit_game.table[p]==card_sent]
+            [sender] = [p for p in dixit_game.players 
+                        if dixit_game.table[p]==card_sent]
         except:
             send_message('This card belongs to no one, {player}!')
 
@@ -313,8 +316,6 @@ def end_of_round(update, context):
                          f'point{"s" if points!=1 else ""}!'
                          for player, points in round_results.items()])
     send_message(results, update, context)
-
-
 
 
 def run_bot(token):
