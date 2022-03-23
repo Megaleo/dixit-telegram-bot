@@ -126,7 +126,8 @@ def start_game_callback(update, context):
 
     context.chat_data['dixit_game'] = dixit_game
     send_message(f"Let's play Dixit!\nThe master {dixit_game.master} "
-                  "has started a game.", update, context)
+                  "has started a game. Click /joingame to join!",
+                  update, context)
 
 
 @ensure_game(exists=True)
@@ -174,11 +175,16 @@ def play_game_callback(update, context):
                      "start playing the game!", update, context)
         return
 
+    send_message(f"The game has begun!", update, context)
+    storytellers_turn(update, context)
+
+
+def storytellers_turn(update, context):
+    dixit_game = context.chat_data['dixit_game']
     logging.info("We're now at stage 1: Storyteller's turn!")
 
     dixit_game.play_game() # can no longer log the chosen cards!
 
-    send_message(f"The game has begun!", update, context)
     send_message(f'{dixit_game.storyteller} is the storyteller!\n'
                  'Please write a hint and click on a card.', update, context)
 
@@ -199,7 +205,7 @@ def inline_callback(update, context):
     storyteller = dixit_game.storyteller
 
     logging.info(f'Inline from {player!r}')
-    logging.info(f'Player is {"not" * (player==storyteller)} the storyteller')
+    logging.info(f'Player is {"not" * (player!=storyteller)} the storyteller')
 
     if dixit_game.stage == 1 and player == storyteller:
         given_clue = update.inline_query.query
@@ -214,23 +220,23 @@ def inline_callback(update, context):
                    for card in player.hand]
 
     elif dixit_game.stage == 2 and player != storyteller:
-        results = [inlinequeryresultphoto(
+        results = [InlineQueryResultPhoto(
                    id = str(uuid4()),
                    photo_url = card.url,
                    thumb_url = card.url,
                    title = f"card {card.id} in the player's hand",
-                   input_message_content = inputtextmessagecontent(
+                   input_message_content = InputTextMessageContent(
                    f"{user.id}:{card.id}")
                    )
                    for card in player.hand]
 
     elif dixit_game.stage == 3 and player != storyteller:
-        results = [inlinequeryresultphoto(
+        results = [InlineQueryResultPhoto(
                    id = str(uuid4()),
                    photo_url = card.url,
                    thumb_url = card.url,
                    title = f"chosen card {card.id}",
-                   input_message_content = inputtextmessagecontent(
+                   input_message_content = InputTextMessageContent(
                    f"{user.id}:{card.id}")
                    )
                    for card in dixit_game.table.values()]
@@ -248,45 +254,44 @@ def parse_cards(update, context):
 
     data, *clue = text.split('\n', maxsplit=1)
     user_id, card_id = (int(i) for i in data.split(':'))
-    logging.info(f'parsing {user_id=}, {card_id=}, {user.first_name=}, '
+    logging.info(f'Parsing {user_id=}, {card_id=}, {user.first_name=}, '
                  f'{user.id=}')
 
     try:
         [player] = [p for p in dixit_game.players if p.id == user_id]
-    except valueerror:
-        send_message(f'you, {user.first_name}, are not playing the game!',
+    except ValueError:
+        send_message(f'You, {user.first_name}, are not playing the game!',
                      update, context)
         return
 
     try:
-        [card_sent] = [c for c in player.hand if c.id == card_id]
-    except valueerror:
-        send_message(f"that's not a card you have in your hand, {player}!",
-                     update, context)
+        [card_sent] = [c for c in dixit_game.cards if c.id == card_id]
+    except ValueError:
+        send_message(f"This card doesn't exist, {player}!", update, context)
         return
 
     if dixit_game.stage == 1:
-        assert player == dixit_game.storyteller, "player is not the storyteller"
+        assert player == dixit_game.storyteller, "Player is not the storyteller"
 
         if len(clue) != 1:
-            send_message(f'you forgot to give us a clue!', update, context)
+            send_message(f'You forgot to give us a clue!', update, context)
             return
         [clue] = clue
         logging.info(f'{clue=}')
-        logging.info("we're now at stage 2: others' turn!")
+        logging.info("We're now at stage 2: others' turn!")
 
         dixit_game.storyteller_turn(card=card_sent, clue=clue)
 
-        send_message(f"now, let the others send their cards!", update, context)
+        send_message(f"Now, let the others send their cards!", update, context)
 
     elif dixit_game.stage == 2:
         dixit_game.player_turns(player=player, card=card_sent)
 
-        logging.info(f"there are ({len(dixit_game.table)}/"
+        logging.info(f"There are ({len(dixit_game.table)}/"
                      f"{len(dixit_game.players)}) cards on the table!")
         if dixit_game.stage == 3:
-            logging.info("we're now at stage 3: vote!")
-            send_message(f"time to vote!", update, context)
+            logging.info("We're now at stage 3: vote!")
+            send_message(f"Time to vote!", update, context)
 
     elif dixit_game.stage == 3:
         try:
@@ -295,7 +300,7 @@ def parse_cards(update, context):
         except:
             send_message('This card belongs to no one, {player}!')
 
-        dixit_game.voting_turns(player=player, voted=sender)
+        dixit_game.voting_turns(player=player, vote=sender)
 
         logging.info(f"I've received ({len(dixit_game.votes)}/"
                      f"{len(dixit_game.players) - 1}) votes")
@@ -316,6 +321,9 @@ def end_of_round(update, context):
                          f'point{"s" if points!=1 else ""}!'
                          for player, points in round_results.items()])
     send_message(results, update, context)
+
+    dixit_game.new_round()
+    storytellers_turn(update, context)
 
 
 def run_bot(token):

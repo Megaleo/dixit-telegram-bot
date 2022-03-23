@@ -122,6 +122,8 @@ class DixitGame:
         self.votes = votes or {}
         self._dealer_cards = None
         self.cards_per_player = 6
+        self.discard_pile = []
+        self.score = dict.fromkeys(self.players, 0)
 
     @property
     def stage(self):
@@ -205,11 +207,31 @@ class DixitGame:
         '''Implements traditional Dixit point counting'''
         player_points = Counter(self.votes.values())
         storyteller = self.storyteller
-        storytller_wins = len(self.votes) > player_points[storyteller] > 0
+        storyteller_wins = len(self.votes) > player_points[storyteller] > 0
         player_points[storyteller] = 3 if storyteller_wins else 0
         for player, vote in self.votes.items():
             player_points[player] += (2 + storyteller_wins)*(vote == storyteller)
+        self.results = player_points
         return player_points
 
+    def new_round(self):
+        '''Resets variables to start a new round of dixit'''
+        self.discard_pile.extend(self.table.values())
+        ST_i = self.players.index(self.storyteller)
+        self.storyteller = self.players[(ST_i + 1) % len(self.players)]
+        
+        if len(self.dealer_cards) < len(self.players): # if not enough cards
+            shuffle(self.discard_pile)
+            self.dealer_cards.extend(self.discard_pile)
+            self.discard_pile.clear()
 
+        for player in self.players:
+            self.score.setdefault(player, 0)
+            self.score[player] += self.results.get(player, 0)
 
+            player.add_card(self.dealer_cards.pop())
+
+        self.results = None
+        self.table.clear()
+        self.votes.clear()
+        self.stage = Stage.STORYTELLER
