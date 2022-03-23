@@ -1,25 +1,25 @@
 # Stages
 # A stage is defined by a period when the bot is waiting for user input
 #
-#          No        Yes
-#      +------- End? --> Show final results
+#          No   End? Yes
+#      +-------  0  --> Show final results
 #      |         ^
 #      V         |
 # 0 -> 1 -> 2 -> 3
 #
-# 0 : Players entering the game
-# (Cards are given inline to each player)
-# 1 : Storyteller broadcasts the clue
-# 2 : Each player chooses their card, including storyteller
-# (Cards are shown)
-# 3 : Players other than the storyteller choose their option
-# (Show results of the game with points to each one)
+# 0 - LOBBY: Players entering the game/viewing results
+# 1 - STORYTELLER: Storyteller chooses a clue and a card.
+# 2 - PLAYERS: Each player chooses their card. They go to the table 
+# 3 - VOTE: Players other than the storyteller choose their option
 #
+# (Show results of the game with points to each one)
+
 
 from typing import Optional, List, Mapping
 from telegram import User
 from collections import Counter
 from random import shuffle, choice
+from enum import IntEnum
 
 '''
 TODO
@@ -44,6 +44,12 @@ TODO
 [ ] Store game history for future analysis?
 '''
 
+
+class Stage(IntEnum):
+    LOBBY = 0
+    STORYTELLER = 1
+    PLAYERS = 2
+    VOTE = 3 
 
 
 class Card:
@@ -97,7 +103,7 @@ class Player:
 
 class DixitGame:
     def __init__(self,
-                 stage: int = 0,
+                 stage: Stage = Stage.LOBBY,
                  players: Optional[Player] = None,
                  master: Optional[Player] = None,
                  storyteller: Optional[Player] = None,
@@ -122,10 +128,9 @@ class DixitGame:
         return self._stage
 
     @stage.setter
-    def stage(self, val: int):
-        if val not in range(4):
-            raise ValueError(f'Stage number {self.stage} '
-                              'should be between 0 and 3 (inclusive)')
+    def stage(self, val: Stage):
+        if val not in Stage:
+            raise ValueError(f'Valid stages are given by the Stage enum class')
         self._stage = val
 
     @property
@@ -177,12 +182,12 @@ class DixitGame:
                 player.add_card(card)
 
         self.storyteller = choice(self.players)
-        self.stage = 1
+        self.stage = Stage.STORYTELLER
     
     def storyteller_turn(self, card, clue):
         self.clue = clue
         self.table[self.storyteller] = card
-        self.stage = 2
+        self.stage = Stage.PLAYERS 
 
     def player_turns(self, player, card):
         # allows players to overwrite the card sent
@@ -191,7 +196,7 @@ class DixitGame:
             ## descomente para encher mesa até 6
             # for i in range(6 - len(self.table)):
             #     self.table[i] = self.dealer_cards.pop()
-            self.stage = 3
+            self.stage = Stage.VOTE
 
     def voting_turns(self, player, vote):
         self.votes[player] = vote
