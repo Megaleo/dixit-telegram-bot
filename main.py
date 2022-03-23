@@ -69,18 +69,24 @@ def find_user_games(context, user):
             for chat_id, dixit_game in get_active_games(context).items()
             if user in dixit_game.users}
 
-
-def ensure_game(callback):
-    """Decorator to ensure a game exists before callbacks are made"""
-    def safe_callback(update, context):
-        # Checks if there is an ongoing game
-        user = update.message.from_user
-        if 'dixit_game' not in context.chat_data.keys():
-            send_message(f"Damn you, {user.first_name}! First, start a game "
-                          "with /startgame!", update, context)
-        else:
-            return callback(update, context)
-    return safe_callback
+def ensure_game(exists=True):
+    """Decorator to ensure a game exists before callbacks are made.
+    Reverse if exists is False"""
+    def ensure_game_decorator(callback):
+        def safe_callback(update, context):
+            # Checks if there is an ongoing game
+            user = update.message.from_user
+            if 'dixit_game' in context.chat_data.keys() != exists:
+                if exists:
+                    send_message(f"Damn you, {user.first_name}! First, start a "
+                                  "game with /startgame!", update, context)
+                else:
+                    send_message(f"Damn you, {user.first_name}! There is a game "
+                                  "in progress already!", update, context)
+            else:
+                return callback(update, context)
+        return safe_callback
+    return ensure_game_decorator
 
 
 def ensure_user_inactive(callback):
@@ -94,7 +100,7 @@ def ensure_user_inactive(callback):
             return callback(update, context)
     return safe_callback
 
-
+@ensure_game(exists=False)
 @ensure_user_inactive
 def start_game_callback(update, context):
     '''Command callback. When /startgame is called, it does the following:
@@ -109,11 +115,6 @@ def start_game_callback(update, context):
     4. Joins master user to the game IF they are not in other games
     '''
     user = update.message.from_user
-    # Checks if there is no ongoing game
-    if 'dixit_game' in context.chat_data:
-        send_message(f"Damn you, {user.first_name}! There is a game in "
-                      "progress already!", update, context)
-        return
 
     logging.info("GAME START")
     logging.info("We're now at stage 0: Lobby!")
@@ -124,7 +125,7 @@ def start_game_callback(update, context):
     send_message(f"Let's play Dixit!\nThe master {dixit_game.master} "
                   "has started a game.", update, context)
 
-@ensure_game
+@ensure_game(exists=True)
 @ensure_user_inactive
 def join_game_callback(update, context):
     '''Command callback. When /joingame is called, it does the following:
@@ -244,7 +245,7 @@ def parse_cards(update, context):
     user_id, card_id = (int(i) for i in data.split(':'))
     logging.info(f'parsing {user_id=}, {card_id=}, {user.first_name=}, '
                  f'{user.id=}')
-    
+
     try:
         [player] = [p for p in dixit_game.players if p.id == user_id]
     except valueerror:
