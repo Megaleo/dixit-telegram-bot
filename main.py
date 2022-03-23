@@ -36,14 +36,16 @@ def send_message(text, update, context, **kwargs):
     '''Sends message to group chat specified in update and logs that'''
     context.bot.send_message(chat_id=update.effective_chat.id, text=text,
                              **kwargs)
-    logging.debug(f'Sent message \"{text}\" to chat {update.effective_chat.id=}')
+    logging.debug(f'Sent message \"{text}\" to chat 
+                  {update.effective_chat.id=}')
 
 
 def send_photo(photo_url, update, context, **kwargs):
     '''Sends photo to group chat specified in update and logs that.'''
     context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo_url,
                            **kwargs)
-    logging.debug(f'Sent photo with url \"{photo_url}\" to chat {update.effective_chat.id=}')
+    logging.debug(f'Sent photo with url \"{photo_url}\" to chat 
+                  {update.effective_chat.id=}')
 
 
 def get_active_games(context):
@@ -84,7 +86,7 @@ def ensure_game(exists=True):
                     send_message(f"Damn you, {user.first_name}! First, start a "
                                   "game with /startgame!", update, context)
                 else:
-                    send_message(f"Damn you, {user.first_name}! There is a game "
+                    send_message(f"Damn you, {user.first_name}! There's a game "
                                   "in progress already!", update, context)
             else:
                 return callback(update, context)
@@ -213,7 +215,7 @@ def inline_callback(update, context):
     storyteller = dixit_game.storyteller
 
     logging.info(f'Inline from {player!r}')
-    logging.info(f'Player is{" not" * (player!=storyteller)} the storyteller')
+    logging.info(f'Player is {"not " * (player!=storyteller)}the storyteller')
 
     if dixit_game.stage == 1 and player == storyteller:
         given_clue = update.inline_query.query
@@ -223,7 +225,7 @@ def inline_callback(update, context):
                    thumb_url = card.url,
                    title = f"Card {card.id} in the storyteller's hand",
                    input_message_content = InputTextMessageContent(
-                       f'{user.id}:{card.id}\n' + given_clue)
+                       f'{player.id}:{card.id}\n' + given_clue)
                    )
                    for card in player.hand]
     elif dixit_game.stage == 2 and player != storyteller:
@@ -233,7 +235,7 @@ def inline_callback(update, context):
                    thumb_url = card.url,
                    title = f"card {card.id} in the player's hand",
                    input_message_content = InputTextMessageContent(
-                   f"{user.id}:{card.id}")
+                   f"{player.id}:{card.id}")
                    )
                    for card in player.hand]
     elif dixit_game.stage == 3 and player != storyteller:
@@ -243,7 +245,7 @@ def inline_callback(update, context):
                    thumb_url = card.url,
                    title = f"chosen card {card.id}",
                    input_message_content = InputTextMessageContent(
-                   f"{user.id}:{card.id}")
+                   f"{player.id}:{card.id}")
                    )
                    for card in dixit_game.table.values()]
     else:
@@ -253,7 +255,7 @@ def inline_callback(update, context):
                    thumb_url = card.url,
                    title = f"Card {card.id} in the player's hand",
                    input_message_content = InputTextMessageContent(
-                       f'{user.first_name} is impatient...')
+                       f'{player} is impatient...')
                    )
                    for card in player.hand]
 
@@ -269,8 +271,7 @@ def end_of_round(update, context):
     send_message(f'The correct answer was...', update, context)
     send_message(dixit_game.clue, update, context)
     send_photo(storyteller_card.url, update, context)
-    results = '\n'.join([f'{player} got {points} '
-                         f'point{"s" if points!=1 else ""}!'
+    results = '\n'.join([f'{player} got {points} point{"s"*(points!=1)}!'
                          for player, points in round_results.items()])
     send_message(results, update, context)
 
