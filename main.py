@@ -23,7 +23,7 @@ TODO
 [ ] Confirm that player's chosen cards were available for choosing, at every
     stage
 
-[ ] Show user buttons to direct him to his cards automatically (vide Uno_Bot)
+[X] Show user buttons to direct him to his cards automatically (vide Uno_Bot)
 
 [ ] Have the bot reply to the relevant message, instead of sending simple
     messages, when appropriate
