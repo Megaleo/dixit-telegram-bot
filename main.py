@@ -288,7 +288,7 @@ def parse_cards(update, context):
 
     elif dixit_game.stage == 3:
         try:
-            [sender] = [p for p in self.players if self.table[p]==card_sent]
+            [sender] = [p for p in dixit_game.players if dixit_game.table[p]==card_sent]
         except:
             send_message('This card belongs to no one, {player}!')
 
