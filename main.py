@@ -30,11 +30,6 @@ TODO
     storytellers, but could just always choose a random card when playing/voting.
 '''
 
-
-# Following tutorial in
-# https://github.com/python-telegram-bot/python-telegram-bot-wiki/Extensions-%E2%80%93-Your-first-Bot
-
-
 def send_message(text, update, context, **kwargs):
     '''Sends message to group chat specified in update and logs that'''
     context.bot.send_message(chat_id=update.effective_chat.id, text=text,
@@ -46,7 +41,7 @@ def send_photo(photo_url, update, context, **kwargs):
     '''Sends photo to group chat specified in update and logs that.'''
     context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo_url,
                            **kwargs)
-    logging.debug(f'Sent message \"{text}\" to chat {update.effective_chat.id=}')
+    logging.debug(f'Sent photo with url \"{photo_url}\" to chat {update.effective_chat.id=}')
 
 
 def get_active_games(context):
@@ -131,7 +126,8 @@ def start_game_callback(update, context):
 
     context.chat_data['dixit_game'] = dixit_game
     send_message(f"Let's play Dixit!\nThe master {dixit_game.master} "
-                  "has started a game. Click /joingame to join!",
+                  "has started a game. Click /joingame to join and "
+                  "/playgame to start playing!",
                   update, context)
 
 
@@ -210,7 +206,7 @@ def inline_callback(update, context):
     storyteller = dixit_game.storyteller
 
     logging.info(f'Inline from {player!r}')
-    logging.info(f'Player is {"not" * (player!=storyteller)} the storyteller')
+    logging.info(f'Player is{" not" * (player!=storyteller)} the storyteller')
 
     if dixit_game.stage == 1 and player == storyteller:
         given_clue = update.inline_query.query
@@ -223,7 +219,6 @@ def inline_callback(update, context):
                        f'{user.id}:{card.id}\n' + given_clue)
                    )
                    for card in player.hand]
-
     elif dixit_game.stage == 2 and player != storyteller:
         results = [InlineQueryResultPhoto(
                    id = str(uuid4()),
@@ -234,7 +229,6 @@ def inline_callback(update, context):
                    f"{user.id}:{card.id}")
                    )
                    for card in player.hand]
-
     elif dixit_game.stage == 3 and player != storyteller:
         results = [InlineQueryResultPhoto(
                    id = str(uuid4()),
@@ -246,7 +240,15 @@ def inline_callback(update, context):
                    )
                    for card in dixit_game.table.values()]
     else:
-        results = [] # gostaria de botar um texto, mas n vi como
+        results = [InlineQueryResultPhoto(
+                   id = str(uuid4()),
+                   photo_url = card.url,
+                   thumb_url = card.url,
+                   title = f"Card {card.id} in the player's hand",
+                   input_message_content = InputTextMessageContent(
+                       f'{user.first_name} is impatient...')
+                   )
+                   for card in player.hand]
 
     update.inline_query.answer(results)
 
@@ -257,7 +259,7 @@ def end_of_round(update, context):
     round_results = dixit_game.count_points()
     storyteller_card = dixit_game.table[dixit_game.storyteller]
 
-    send_message(f'the correct answer was...', update, context)
+    send_message(f'The correct answer was...', update, context)
     send_message(dixit_game.clue, update, context)
     send_photo(storyteller_card.url, update, context)
     results = '\n'.join([f'{player} got {points} '
@@ -360,7 +362,7 @@ def run_bot(token):
 
 if __name__ == '__main__':
     logging_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    logging.basicConfig(format=logging_format, level=logging.DEBUG)
+    logging.basicConfig(format=logging_format, level=logging.INFO)
     with open('token.txt', 'r') as token_file:
         token = token_file.readline().strip() # Remove \n at the end
         run_bot(token)
