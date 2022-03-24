@@ -42,6 +42,9 @@ TODO
     [ ] others?
 
 [ ] Store game history for future analysis?
+
+[ ] Be forgiving to mistakes: allow players to overwrite the cards and choices
+    they made
 '''
 
 
@@ -189,15 +192,17 @@ class DixitGame:
     def storyteller_turn(self, card, clue):
         self.clue = clue
         self.table[self.storyteller] = card
+        # self.storyteller.hand.remove(card) # its safe-ish to remove it later
         self.stage = Stage.PLAYERS
 
     def player_turns(self, player, card):
-        # allows players to overwrite the card sent
         self.table[player] = card
         if len(self.table) == len(self.players):
             ## descomente para encher mesa até 6
             # for i in range(6 - len(self.table)):
             #     self.table[i] = self.draw_pile.pop()
+            for player, card in self.table.items():
+                player.hand.remove(card)
             self.stage = Stage.VOTE
 
     def voting_turns(self, player, vote):
