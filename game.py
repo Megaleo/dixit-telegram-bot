@@ -38,7 +38,7 @@ TODO
     [X] storytellers_turn()
     [X] player_turns()
     [X] voting_turns()
-    [X] count_points()
+    [X] point_counter()
 
 [ ] Store game history for future analysis?
 
@@ -125,7 +125,7 @@ class DixitGame:
         self._draw_pile = None
         self.cards_per_player = 6
         self.discard_pile = []
-        self.score = dict.fromkeys(self.players, 0)
+        self.score = dict.fromkeys(self.players, [0, 0])
 
     @property
     def stage(self):
@@ -207,7 +207,7 @@ class DixitGame:
     def voting_turns(self, player, vote):
         self.votes[player] = vote
 
-    def count_points(self):
+    def point_counter(self):
         '''Implements traditional Dixit point counting'''
         player_points = Counter(self.votes.values())
         storyteller = self.storyteller
@@ -215,8 +215,23 @@ class DixitGame:
         player_points[storyteller] = 3 if storyteller_wins else 0
         for player, vote in self.votes.items():
             player_points[player] += (2 + storyteller_wins)*(vote == storyteller)
-        self.results = player_points
         return player_points
+
+    def count_points(self):
+        if self.stage != Stage.VOTE:
+            raise Exception('This is not the time to update the points')
+        round_points = self.point_counter()
+        print(f'{round_points=}')
+        print(f'{self.score=}')
+        for player in self.players:
+            self.score.setdefault(player, [0, 0])
+            print(f'{self.score[player]=}')
+            print(f'{self.score[player][0]=}')
+            print(f'{type(self.score[player][0])=}')
+            print(f'{round_points.get(player, 0)}')
+            self.score[player][0] += round_points.get(player, 0)
+            self.score[player][1] = round_points.get(player, 0)
+        self.stage = Stage.LOBBY
 
     def new_round(self):
         '''Resets variables to start a new round of dixit'''
@@ -228,10 +243,6 @@ class DixitGame:
             shuffle(self.discard_pile)
             self.draw_pile.extend(self.discard_pile)
             self.discard_pile.clear()
-
-        for player in self.players:
-            self.score.setdefault(player, 0)
-            self.score[player] += self.results.get(player, 0)
 
             player.add_card(self.draw_pile.pop())
 

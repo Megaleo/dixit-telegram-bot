@@ -275,23 +275,6 @@ def inline_callback(update, context):
     update.inline_query.answer(results, cache_time=0)
 
 
-def end_of_round(update, context):
-    dixit_game = context.chat_data['dixit_game']
-
-    round_results = dixit_game.count_points()
-    storyteller_card = dixit_game.table[dixit_game.storyteller]
-
-    send_message(f'The correct answer was...', update, context)
-    send_message(dixit_game.clue, update, context)
-    send_photo(storyteller_card.url, update, context)
-    results = '\n'.join([f'{player} got {points} point{"s"*(points!=1)}!'
-                         for player, points in round_results.items()])
-    send_message(results, update, context)
-
-    dixit_game.new_round()
-    storytellers_turn(update, context)
-
-
 def parse_cards(update, context):
     '''parses the user messages looking for the played cards'''
     dixit_game = context.chat_data['dixit_game']
@@ -339,7 +322,7 @@ def parse_cards(update, context):
         if dixit_game.stage == 3:
             logging.info("We're now at stage 3: vote!")
 
-            send_message(f"Time to vote!", update, context,
+            send_message(f"Hear ye, hear ye! Time to vote!", update, context,
                          button='Click to see the table!')
 
     elif dixit_game.stage == 3:
@@ -355,6 +338,26 @@ def parse_cards(update, context):
                      f"{len(dixit_game.players) - 1}) votes")
         if len(dixit_game.votes) == len(dixit_game.players)-1:
             end_of_round(update, context)
+
+
+def end_of_round(update, context):
+    dixit_game = context.chat_data['dixit_game']
+
+    dixit_game.count_points()
+    storyteller_card = dixit_game.table[dixit_game.storyteller]
+
+    send_message(f'The correct answer was...', update, context)
+    send_photo(storyteller_card.url, update, context)
+    send_message(dixit_game.clue, update, context, button='View table')
+
+    results = '\n'.join([f'{player.name}:  {Pts} ' + f'(+{pts})'*(pts!=0)
+                         for player, (Pts, pts) in dixit_game.score.items()])
+
+    print(results)
+    send_message(results, update, context)
+
+    dixit_game.new_round()
+    storytellers_turn(update, context)
 
 
 def run_bot(token):
