@@ -43,7 +43,7 @@ TODO
 
 [ ] Store game history for future analysis?
 
-[ ] Abstract away from DixitGame a more general "CardGame" class
+[/] Abstract away from DixitGame a more general "CardGame" class
 '''
 
 
@@ -65,6 +65,7 @@ class CardGame:
         self._draw_pile = None
         self.discard_pile = []
         self.score = dict.fromkeys(self.players, 0)
+        self.round_results = None # dict
     
     @property
     def draw_pile(self):
@@ -126,8 +127,13 @@ class CardGame:
 
         self.distribute_cards(strict=True)
 
+        for player in self.players:
+            self.score.setdefault(player, 0)
+            self.score[player] += self.round_results.get(player, 0)
+
         self.table.clear()
         self.votes.clear()
+        self.round_results = None
 
 
 class Stage(IntEnum):
@@ -287,7 +293,7 @@ class DixitGame(CardGame):
         player_points[storyteller] = 3 if storyteller_wins else 0
         for player, vote in self.votes.items():
             player_points[player] += (2 + storyteller_wins)*(vote == storyteller)
-        self.results = player_points
+        self.round_results = player_points
         return player_points
 
     def new_round(self):
@@ -297,9 +303,4 @@ class DixitGame(CardGame):
         s_teller_i = self.players.index(self.storyteller)
         self.storyteller = self.players[(s_teller_i + 1) % len(self.players)]
         
-        for player in self.players:
-            self.score.setdefault(player, 0)
-            self.score[player] += self.results.get(player, 0)
-
-        self.results = None
         self.stage = Stage.STORYTELLER
