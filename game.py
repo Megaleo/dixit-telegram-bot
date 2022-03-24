@@ -42,7 +42,92 @@ TODO
     [ ] others?
 
 [ ] Store game history for future analysis?
+
+[ ] Abstract away from DixitGame a more general "CardGame" class
 '''
+
+
+class CardGame:
+    '''A general class for simple card games. Depends on a Player class which
+    must implement a list-like .hand attribute containing his cards'''
+    def __init__(self, 
+                 players = None, # [Player],
+                 cards = None,
+                 cards_per_player=3,
+                 cards_per_turn=1,
+                 cards_per_draw=1,
+                 ):
+        self.players = players or []
+        self.cards = cards or []
+        self.cards_per_player = cards_per_player
+        self.cards_per_turn = cards_per_turn
+        self.table = {}
+        self._draw_pile = None
+        self.discard_pile = []
+        self.score = dict.fromkeys(self.players, 0)
+    
+    @property
+    def draw_pile(self):
+        if self._draw_pile is None:
+            self._draw_pile = self.cards.copy()
+            shuffle(self._draw_pile)
+        return self._draw_pile
+
+    @classmethod
+    def shuffle(cls, sequence): # so as not to need to import from random
+        shuffle(sequence)
+
+    def move_card(self, card, player, destination, origin=None, 
+                  remove_method=list.remove):
+        origin = origin or player.hand
+        if card not in origin:
+            raise ValueError("Card not available!")
+
+        if isinstance(destination, list): add_method = list.append
+        elif isinstance(destination, set): add_method = set.add
+        elif isinstance(destination, dict): 
+            add_method = lambda dic, val: dic.__setitem__(player, val)
+
+        remove_method(origin, card) 
+        add_method(destination, card)        
+
+    def play_card(self, card, player):
+        self.move_card(card, player, self.table)
+
+    def discard(self, card, player):
+        self.move_card(card, player, self.discard_pile)
+        
+    def distribute_cards(self, strict=True):
+        draw_pile = self.draw_pile
+        print(f'{len(draw_pile)=}')
+        print(f'{self.players=}')
+        for player in self.players:
+            print(f'giving cards to {player}')
+            missing_cards = self.cards_per_player - len(player.hand)
+            print(f'{missing_cards=}')
+            if strict and missing_cards != self.cards_per_turn:
+                raise ValueError('Player has wrong number of cards!')
+            for _ in range(missing_cards):
+                card = draw_pile.pop()
+                print(f'{card=}')
+                player.add_card(card)
+
+    def start_game(self):
+        self.distribute_cards(strict=False)
+
+
+    def new_round(self):
+        self.discard_pile.extend(self.table.values())
+
+        if len(self.draw_pile) < len(self.players) * self.cards_per_turn:
+            shuffle(self.discard_pile)
+            self.draw_pile.extend(self.discard_pile)
+            self.discard_pile.clear()
+
+        self.distribute_cards(strict=True)
+
+        self.table.clear()
+        self.votes.clear()
 
 
 class Stage(IntEnum):
@@ -101,7 +186,7 @@ class Player:
         self.hand.append(card)
 
 
-class DixitGame:
+class DixitGame(CardGame):
     def __init__(self,
                  stage: Stage = Stage.LOBBY,
                  players: Optional[Player] = None,
@@ -112,18 +197,20 @@ class DixitGame:
                  table: Mapping[Player, Card] = None, # Players' played cards
                  votes: Mapping[Player, Player] = None, # Players' voted storytll
                  ):
+
+        super().__init__(
+                 players = players, # [Player],
+                 cards = cards,
+                 cards_per_player = 6,
+                 cards_per_turn = 1,
+                 cards_per_draw = 1,
+                 )
+
         self._stage = stage
-        self.players = players or []
         self._storyteller = storyteller
         self.master = master
         self.clue = clue
-        self.cards = cards or []
-        self.table = table or {}
         self.votes = votes or {}
-        self._draw_pile = None
-        self.cards_per_player = 6
-        self.discard_pile = []
-        self.score = dict.fromkeys(self.players, 0)
 
     @property
     def stage(self):
@@ -150,12 +237,6 @@ class DixitGame:
         return len(self.cards)//self.cards_per_player
 
     @property
-    def draw_pile(self):
-        if self._draw_pile is None:
-            self._draw_pile = self.cards.copy()
-        return self._draw_pile
-
-    @property
     def users(self):
         return [player.user for player in self.players]
 
@@ -177,23 +258,17 @@ class DixitGame:
         return game
     
     def play_game(self):
-        draw_pile = self.draw_pile
-        for player in self.players:
-            for _ in range(self.cards_per_player): # 6 cards per player
-                card = draw_pile.pop()
-                player.add_card(card)
-
+        super().start_game()
         self.storyteller = choice(self.players)
         self.stage = Stage.STORYTELLER
     
     def storyteller_turn(self, card, clue):
         self.clue = clue
-        self.table[self.storyteller] = card
+        self.play_card(card, self.storyteller)
         self.stage = Stage.PLAYERS 
 
     def player_turns(self, player, card):
-        # allows players to overwrite the card sent
-        self.table[player] = card
+        self.play_card(card, player)
         if len(self.table) == len(self.players):
             ## descomente para encher mesa até 6
             # for i in range(6 - len(self.table)):
@@ -201,7 +276,8 @@ class DixitGame:
             self.stage = Stage.VOTE
 
     def voting_turns(self, player, vote):
-        self.votes[player] = vote
+        self.move_card(vote, player, origin=self.table, destination=self.votes,
+                       remove_method=lambda *x: None)
 
     def count_points(self):
         '''Implements traditional Dixit point counting'''
@@ -216,22 +292,14 @@ class DixitGame:
 
     def new_round(self):
         '''Resets variables to start a new round of dixit'''
-        self.discard_pile.extend(self.table.values())
-        ST_i = self.players.index(self.storyteller)
-        self.storyteller = self.players[(ST_i + 1) % len(self.players)]
-        
-        if len(self.draw_pile) < len(self.players): # if not enough cards
-            shuffle(self.discard_pile)
-            self.draw_pile.extend(self.discard_pile)
-            self.discard_pile.clear()
+        super().new_round()
 
+        s_teller_i = self.players.index(self.storyteller)
+        self.storyteller = self.players[(s_teller_i + 1) % len(self.players)]
+        
         for player in self.players:
             self.score.setdefault(player, 0)
             self.score[player] += self.results.get(player, 0)
 
-            player.add_card(self.draw_pile.pop())
-
         self.results = None
-        self.table.clear()
-        self.votes.clear()
         self.stage = Stage.STORYTELLER

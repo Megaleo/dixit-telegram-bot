@@ -218,6 +218,8 @@ def inline_callback(update, context):
     logging.info(f'Player is {"not " * (player!=storyteller)}the storyteller')
 
     if dixit_game.stage == 1 and player == storyteller:
+        print('entrei 1')
+        print(player.hand)
         given_clue = update.inline_query.query
         results = [InlineQueryResultPhoto(
                    id = str(uuid4()),
