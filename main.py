@@ -259,7 +259,7 @@ def inline_callback(update, context):
                    )
                    for card in player.hand]
 
-    update.inline_query.answer(results)
+    update.inline_query.answer(results, cache_time=0)
 
 
 def end_of_round(update, context):
