@@ -3,7 +3,6 @@ from telegram import (Update, InlineQueryResultPhoto, InputTextMessageContent,
 from telegram.ext import (Updater, CallbackContext, CommandHandler,
                           InlineQueryHandler, MessageHandler, Filters)
 from uuid import uuid4
-from random import randint
 import logging
 import functools
 
@@ -32,10 +31,20 @@ TODO
     storytellers, but could just always choose a random card when playing/voting.
 '''
 
-def send_message(text, update, context, **kwargs):
-    '''Sends message to group chat specified in update and logs that'''
+def send_message(text, update, context, button=None, **kwargs):
+    '''Sends message to group chat specified in update and logs it. If the
+    button argument is passed, show the users a button with the specified 
+    text, directing them to the current list of cards stored inline'''
+    markup = None
+    if isinstance(button, str):
+        keyboard = [[InlineKeyboardButton(button,
+                     switch_inline_query_current_chat='')]]
+        markup = InlineKeyboardMarkup(keyboard)
+    elif button is not None:
+        raise ValueError('`button` must be a string or None')
+
     context.bot.send_message(chat_id=update.effective_chat.id, text=text,
-                             **kwargs)
+                             reply_markup=markup, **kwargs)
     logging.debug(f'Sent message \"{text}\" to chat '
                   '{update.effective_chat.id=}')
 
@@ -190,13 +199,9 @@ def storytellers_turn(update, context):
     logging.info("We're now at stage 1: Storyteller's turn!")
 
     # Button to switch to inline for the player to see their cards
-    inline_message = f"Choose your card above. Lucky number: {randint(0, 1000)}"
-    keyboard = [[InlineKeyboardButton("See your cards",
-                 switch_inline_query_current_chat=inline_message)]]
-    markup = InlineKeyboardMarkup(keyboard)
     send_message(f'{dixit_game.storyteller} is the storyteller!\n'
                  'Please write a hint and click on a card.', update, context,
-                 reply_markup=markup)
+                 button='Click to see your cards!')
 
 
 def inline_callback(update, context):
@@ -315,7 +320,8 @@ def parse_cards(update, context):
 
         dixit_game.storyteller_turn(card=card_sent, clue=clue)
 
-        send_message(f"Now, let the others send their cards!", update, context)
+        send_message(f"Now, let the others send their cards!", update, context,
+                     button='Click to see your cards!')
 
     elif dixit_game.stage == 2:
         dixit_game.player_turns(player=player, card=card_sent)
@@ -324,7 +330,9 @@ def parse_cards(update, context):
                      f"{len(dixit_game.players)}) cards on the table!")
         if dixit_game.stage == 3:
             logging.info("We're now at stage 3: vote!")
-            send_message(f"Time to vote!", update, context)
+
+            send_message(f"Time to vote!", update, context,
+                         button='Click to see the table!')
 
     elif dixit_game.stage == 3:
         try:
