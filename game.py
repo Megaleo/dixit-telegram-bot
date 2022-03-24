@@ -244,7 +244,7 @@ class DixitGame:
             self.draw_pile.extend(self.discard_pile)
             self.discard_pile.clear()
 
-            player.add_card(self.draw_pile.pop())
+        player.add_card(self.draw_pile.pop())
 
         self.results = None
         self.table.clear()
