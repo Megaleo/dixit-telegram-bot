@@ -11,24 +11,32 @@ from game import DixitGame
 '''
 TODO
 
-[ ] End game: ask Master whether to end game or not
+[ ] End game
+    [ ] ask Master whether to end game or not 
+    [ ] Improve the way results are shown; one of the fun parts of dixit is
+        discussing whose answer each person has chosen 
+        [ ] Temporarily, show via text who voted on whose card 
+    [ ] Allow new players to join the game between rounds 
+    [ ] Show total and last round's points
 
-[ ] Improve the way results are shown; one of the fun parts of dixit is
-    discussing whose answer each person has chosen
-
-[ ] Force InlineQuery to discard its cache and update itself even on empty
+[X] Force InlineQuery to discard its cache and update itself even on empty
     queries
 
-[ ] Confirm that player's chosen cards were available for choosing, at every
-    stage
+[ ] Confirm that the player's chosen cards were available for choosing, at every
+    stage?
 
 [X] Show user buttons to direct him to his cards automatically (vide Uno_Bot)
 
 [ ] Have the bot reply to the relevant message, instead of sending simple
     messages, when appropriate
 
-[ ] Have dummy players to better debug the game alone. They would not be
-    storytellers, but could just always choose a random card when playing/voting.
+[ ] Debugging
+    [ ] Have dummy players to better debug the game alone. They would not be
+        storytellers, but could just always choose a random card when
+        playing/voting.
+    [ ] Define custom Exceptions?
+    [ ] Create unit tests
+    
 '''
 
 def send_message(text, update, context, button=None, **kwargs):

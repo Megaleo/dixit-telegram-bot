@@ -24,13 +24,13 @@ from enum import IntEnum
 '''
 TODO
 
-[ ] Discard pile of cards (?)
+[?] Discard pile of cards (?)
 
-[ ] Use (Int?)Enums to represent the stages of the game
+[X] Use (Int?)Enums to represent the stages of the game
 
-[ ] End game: restart variables, accumulate points, etc.
+[X] End game: restart variables, accumulate points, etc.
 
-[ ] Move all DixitGame-related operations when a new stage is started currently
+[X] Move all DixitGame-related operations when a new stage is started currently
     in main.py to methods of the class itself (DixitGame.voting_turn(),
     DixitGame.storyteller_turn(), etc.)
     [X] start_game() (now new_game())
@@ -39,12 +39,11 @@ TODO
     [X] player_turns()
     [X] voting_turns()
     [X] count_points()
-    [ ] others?
 
 [ ] Store game history for future analysis?
 
-[ ] Be forgiving to mistakes: allow players to overwrite the cards and choices
-    they made
+[/] Be forgiving to mistakes: allow players to overwrite the cards and choices
+    they made (Cards can be overwritten so long a new stage hasn't been triggered)
 '''
 
 
