@@ -67,7 +67,7 @@ class Card:
         return (self.image_id, self.id) == (other.image_id, other.id)
 
     def __repr__(self):
-        return f'Card({self.image_id = }, {self.id = })'
+        return f'Card({self.image_id=}, {self.id=})'
 
     @property
     def url(self):
@@ -86,7 +86,7 @@ class Player:
         self.id = self.user.id
 
     def __repr__(self):
-        return f'Player({self.name=}, {self.user.id=})'
+        return f'Player(name={self.name}, id_={self.id})'
 
     def __str__(self):
         return self.name
@@ -243,8 +243,9 @@ class DixitGame:
             shuffle(self.discard_pile)
             self.draw_pile.extend(self.discard_pile)
             self.discard_pile.clear()
-
-        player.add_card(self.draw_pile.pop())
+        
+        for player in self.players:
+            player.add_card(self.draw_pile.pop())
 
         self.results = None
         self.table.clear()

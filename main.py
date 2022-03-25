@@ -348,7 +348,6 @@ def end_of_round(update, context):
 
     send_message(f'The correct answer was...', update, context)
     send_photo(storyteller_card.url, update, context)
-    send_message(dixit_game.clue, update, context, button='View table')
 
     results = '\n'.join([f'{player.name}:  {Pts} ' + f'(+{pts})'*(pts!=0)
                          for player, (Pts, pts) in dixit_game.score.items()])
