@@ -15,7 +15,7 @@ TODO
     [ ] Implement criterion to end the game
     [ ] Improve the way results are shown; one of the fun parts of dixit is
         discussing whose answer each person has chosen 
-        [ ] Temporarily, show via text who voted on whose card 
+        [X] Temporarily, show via text who voted on whose card 
     [X] Allow new players to join the game between rounds 
     [X] Show total and last round's points
 
@@ -349,8 +349,20 @@ def end_of_round(update, context):
 
     results = '\n'.join([f'{player.name}:  {Pts} ' + f'(+{pts})'*(pts!=0)
                          for player, (Pts, pts) in dixit_game.score.items()])
+    
+    vote_list = []
+    grouped_votes = {}
+    for voter, voted in dixit_game.votes.items():
+        grouped_votes.setdefault(voted, []).append(voter) 
+    for voted, voters in grouped_votes.items():
+       vote_list.append(f'{voters[0]} ---> {voted}') 
+       for voter in voters[1:]:
+           vote_list.append(str(voter))
+       vote_list.append('')
+    votes = '\n'.join(vote_list)
 
     send_message(results, update, context)
+    send_message(votes, update, context)
 
     dixit_game.new_round()
     storytellers_turn(update, context)
