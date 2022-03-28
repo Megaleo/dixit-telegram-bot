@@ -232,6 +232,9 @@ class DixitGame:
             self.score.setdefault(player, [0, 0])
             self.score[player][0] += round_points.get(player, 0)
             self.score[player][1] = round_points.get(player, 0)
+        # sort players by score
+        self.score = dict(sorted(self.score.items(), key=lambda x: x[1],
+                                 reverse=True))
         self.stage = Stage.LOBBY
 
     def new_round(self):
