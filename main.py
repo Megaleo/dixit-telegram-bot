@@ -12,12 +12,12 @@ from game import DixitGame
 TODO
 
 [ ] End game
-    [ ] ask Master whether to end game or not 
+    [ ] Implement criterion to end the game
     [ ] Improve the way results are shown; one of the fun parts of dixit is
         discussing whose answer each person has chosen 
         [ ] Temporarily, show via text who voted on whose card 
     [ ] Allow new players to join the game between rounds 
-    [ ] Show total and last round's points
+    [X] Show total and last round's points
 
 [X] Force InlineQuery to discard its cache and update itself even on empty
     queries
