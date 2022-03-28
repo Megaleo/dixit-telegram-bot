@@ -168,6 +168,16 @@ class DixitGame:
         self.players.append(player)
         self.master = self.master or player
 
+    def refill_hand(self, player, strict=False):
+        '''makes player hold `self.cards_per_player` cards again'''
+        n_cards = self.cards_per_player - len(player.hand)
+        if strict and n_cards!=1:
+            raise ValueError('Player should not be missing more than one card!')
+        if n_cards < 0:
+            raise ValueError('Player has too many cards!')
+        for _ in range(n_cards):
+            player.hand.append(self.draw_pile.pop())
+
     @classmethod
     def new_game(self, master):
         game_ids = list(range(1, 101))
@@ -181,10 +191,7 @@ class DixitGame:
     def start_game(self):
         draw_pile = self.draw_pile
         for player in self.players:
-            for _ in range(self.cards_per_player): # 6 cards per player
-                card = draw_pile.pop()
-                player.add_card(card)
-
+            self.refill_hand(player)
         self.storyteller = choice(self.players)
         self.stage = Stage.STORYTELLER
 
@@ -245,7 +252,7 @@ class DixitGame:
             self.discard_pile.clear()
         
         for player in self.players:
-            player.add_card(self.draw_pile.pop())
+            self.refill_hand(player)
 
         self.results = None
         self.table.clear()

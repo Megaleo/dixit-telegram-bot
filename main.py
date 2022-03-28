@@ -16,7 +16,7 @@ TODO
     [ ] Improve the way results are shown; one of the fun parts of dixit is
         discussing whose answer each person has chosen 
         [ ] Temporarily, show via text who voted on whose card 
-    [ ] Allow new players to join the game between rounds 
+    [X] Allow new players to join the game between rounds 
     [X] Show total and last round's points
 
 [X] Force InlineQuery to discard its cache and update itself even on empty
