@@ -228,14 +228,8 @@ class DixitGame:
         if self.stage != Stage.VOTE:
             raise Exception('This is not the time to update the points')
         round_points = self.point_counter()
-        print(f'{round_points=}')
-        print(f'{self.score=}')
         for player in self.players:
             self.score.setdefault(player, [0, 0])
-            print(f'{self.score[player]=}')
-            print(f'{self.score[player][0]=}')
-            print(f'{type(self.score[player][0])=}')
-            print(f'{round_points.get(player, 0)}')
             self.score[player][0] += round_points.get(player, 0)
             self.score[player][1] = round_points.get(player, 0)
         self.stage = Stage.LOBBY
@@ -243,8 +237,8 @@ class DixitGame:
     def new_round(self):
         '''Resets variables to start a new round of dixit'''
         self.discard_pile.extend(self.table.values())
-        ST_i = self.players.index(self.storyteller)
-        self.storyteller = self.players[(ST_i + 1) % len(self.players)]
+        s_teller_i = self.players.index(self.storyteller)
+        self.storyteller = self.players[(s_teller_i + 1) % len(self.players)]
 
         if len(self.draw_pile) < len(self.players): # if not enough cards
             shuffle(self.discard_pile)

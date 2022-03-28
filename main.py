@@ -4,7 +4,7 @@ from telegram.ext import (Updater, CallbackContext, CommandHandler,
                           InlineQueryHandler, MessageHandler, Filters)
 from uuid import uuid4
 import logging
-import functools
+from functools import wraps
 
 from game import DixitGame
 
@@ -44,31 +44,29 @@ def send_message(text, update, context, button=None, **kwargs):
     button argument is passed, show the users a button with the specified 
     text, directing them to the current list of cards stored inline'''
     markup = None
-    if isinstance(button, str):
+    if button is not None:
         keyboard = [[InlineKeyboardButton(button,
                      switch_inline_query_current_chat='')]]
         markup = InlineKeyboardMarkup(keyboard)
-    elif button is not None:
-        raise ValueError('`button` must be a string or None')
 
     context.bot.send_message(chat_id=update.effective_chat.id, text=text,
                              reply_markup=markup, **kwargs)
-    logging.debug(f'Sent message \"{text}\" to chat '
-                  '{update.effective_chat.id=}')
+    logging.debug(f'Sent message "{text}" to chat {update.effective_chat.id=}')
 
 
 def send_photo(photo_url, update, context, **kwargs):
     '''Sends photo to group chat specified in update and logs that.'''
     context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo_url,
                            **kwargs)
-    logging.debug(f'Sent photo with url \"{photo_url}\" to chat '
+    logging.debug(f'Sent photo with url "{photo_url}" to chat '
                   '{update.effective_chat.id=}')
 
 
 def get_active_games(context):
     '''Returns all `DixitGame`'s that are in `context.dispatcher.chat_data`
     as a dict of chat_id: dixit_game'''
-    if (chat_data := context.dispatcher.chat_data):
+    chat_data = context.dispatcher.chat_data
+    if chat_data is not None:
         active_games = {chat_id: data['dixit_game'] for chat_id, data in
                         chat_data.items() if 'dixit_game' in data}
         return active_games
@@ -94,7 +92,7 @@ def ensure_game(exists=True):
     """Decorator to ensure a game exists before callbacks are made.
     Reverse if exists is False"""
     def ensure_game_decorator(callback):
-        @functools.wraps(callback) # Preserve info about callback
+        @wraps(callback) # Preserve info about callback
         def safe_callback(update, context):
             # Checks if there is an ongoing game
             user = update.message.from_user
@@ -113,7 +111,7 @@ def ensure_game(exists=True):
 
 def ensure_user_inactive(callback):
     """Decorator to ensure the user is not in another game"""
-    @functools.wraps(callback) # Preserve info about callback
+    @wraps(callback) # Preserve info about callback
     def safe_callback(update, context):
         user = update.message.from_user
         if find_user_games(context, user):
@@ -352,7 +350,6 @@ def end_of_round(update, context):
     results = '\n'.join([f'{player.name}:  {Pts} ' + f'(+{pts})'*(pts!=0)
                          for player, (Pts, pts) in dixit_game.score.items()])
 
-    print(results)
     send_message(results, update, context)
 
     dixit_game.new_round()
