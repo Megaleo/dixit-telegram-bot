@@ -259,7 +259,7 @@ class DixitGame:
             shuffle(self.discard_pile)
             self.draw_pile.extend(self.discard_pile)
             self.discard_pile.clear()
-        
+
         for player in self.players:
             self.refill_hand(player)
 
