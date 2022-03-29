@@ -315,8 +315,9 @@ def parse_cards(update, context):
         dixit_game.storyteller_turn(card=card_sent, clue=clue)
 
         send_message(f"Now, let the others send their cards!\n"
-                     f"Clue: **{dixit_game.clue}**", update, context,
-                     button='Click to see your cards!')
+                     f"Clue: *{dixit_game.clue}*", update, context,
+                     button='Click to see your cards!',
+                     parse_mode='Markdown')
 
     elif dixit_game.stage == 2:
         dixit_game.player_turns(player=player, card=card_sent)
@@ -327,9 +328,9 @@ def parse_cards(update, context):
             logging.info("We're now at stage 3: vote!")
 
             send_message(f"Hear ye, hear ye! Time to vote!\n"
-                         f"Clue: **{dixit_game.clue}**", update, context,
+                         f"Clue: *{dixit_game.clue}*", update, context,
                          button='Click to see the table!',
-                         parse_mode=telegram.ParseMode.MARKDOWN)
+                         parse_mode='Markdown')
 
     elif dixit_game.stage == 3:
         try:
