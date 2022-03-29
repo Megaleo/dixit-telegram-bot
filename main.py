@@ -14,9 +14,9 @@ TODO
 [ ] End game
     [ ] Implement criterion to end the game
     [ ] Improve the way results are shown; one of the fun parts of dixit is
-        discussing whose answer each person has chosen 
-        [X] Temporarily, show via text who voted on whose card 
-    [X] Allow new players to join the game between rounds 
+        discussing whose answer each person has chosen
+        [X] Temporarily, show via text who voted on whose card
+    [X] Allow new players to join the game between rounds
     [X] Show total and last round's points
 
 [X] Force InlineQuery to discard its cache and update itself even on empty
@@ -36,12 +36,12 @@ TODO
         playing/voting.
     [ ] Define custom Exceptions?
     [ ] Create unit tests
-    
+
 '''
 
 def send_message(text, update, context, button=None, **kwargs):
     '''Sends message to group chat specified in update and logs it. If the
-    button argument is passed, show the users a button with the specified 
+    button argument is passed, show the users a button with the specified
     text, directing them to the current list of cards stored inline'''
     markup = None
     if button is not None:
@@ -309,7 +309,8 @@ def parse_cards(update, context):
 
         dixit_game.storyteller_turn(card=card_sent, clue=clue)
 
-        send_message(f"Now, let the others send their cards!", update, context,
+        send_message(f"Now, let the others send their cards!\n"
+                     f"Clue: *{dixit_game.clue}*", update, context,
                      button='Click to see your cards!')
 
     elif dixit_game.stage == 2:
@@ -320,8 +321,10 @@ def parse_cards(update, context):
         if dixit_game.stage == 3:
             logging.info("We're now at stage 3: vote!")
 
-            send_message(f"Hear ye, hear ye! Time to vote!", update, context,
-                         button='Click to see the table!')
+            send_message(f"Hear ye, hear ye! Time to vote!\n"
+                         f"Clue: *{dixit_game.clue}*", update, context,
+                         button='Click to see the table!',
+                         parse_mode=telegram.ParseMode.MARKDOWN)
 
     elif dixit_game.stage == 3:
         try:
@@ -349,13 +352,13 @@ def end_of_round(update, context):
 
     results = '\n'.join([f'{player.name}:  {Pts} ' + f'(+{pts})'*(pts!=0)
                          for player, (Pts, pts) in dixit_game.score.items()])
-    
+
     vote_list = []
     grouped_votes = {}
     for voter, voted in dixit_game.votes.items():
-        grouped_votes.setdefault(voted, []).append(voter) 
+        grouped_votes.setdefault(voted, []).append(voter)
     for voted, voters in grouped_votes.items():
-       vote_list.append(f'{voters[0]} ---> {voted}') 
+       vote_list.append(f'{voters[0]} ---> {voted}')
        for voter in voters[1:]:
            vote_list.append(str(voter))
        vote_list.append('')
