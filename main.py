@@ -172,7 +172,12 @@ def join_game_callback(update, context):
 
     logging.info(f'{user.first_name=}, {user.id=} joined the game')
     dixit_game.add_player(user)
-    send_message(f"{user.first_name} was added to the game!", update, context)
+    if dixit_game.stage==0:
+        text = f"{user.first_name} was added to the game!"
+    else:
+        text = f"Welcome {user.first_name}! You  may play when a new "\
+                "rounds starts"
+    send_message(text, update, context)
 
 
 @ensure_game(exists=True)
@@ -337,13 +342,13 @@ def parse_cards(update, context):
         logging.info(f"I've received ({len(dixit_game.votes)}/"
                      f"{len(dixit_game.players) - 1}) votes")
         if len(dixit_game.votes) == len(dixit_game.players)-1:
+            dixit_game.end_of_round()
             end_of_round(update, context)
 
 
 def end_of_round(update, context):
     dixit_game = context.chat_data['dixit_game']
 
-    dixit_game.count_points()
     storyteller_card = dixit_game.table[dixit_game.storyteller]
 
     send_message(f'The correct answer was...', update, context)

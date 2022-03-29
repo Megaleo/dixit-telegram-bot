@@ -126,6 +126,7 @@ class DixitGame:
         self.cards_per_player = 6
         self.discard_pile = []
         self.score = dict.fromkeys(self.players, [0, 0])
+        self.lobby = []
 
     @property
     def stage(self):
@@ -165,7 +166,10 @@ class DixitGame:
         '''adds player to game. Makes it master if there wasn't one'''
         if isinstance(player, User):
             player = Player(player)
-        self.players.append(player)
+        if self.stage == Stage.LOBBY:
+            self.players.append(player)
+        else:
+            self.lobby.append(player)
         self.master = self.master or player
 
     def refill_hand(self, player, strict=False):
@@ -237,11 +241,19 @@ class DixitGame:
                                  reverse=True))
         self.stage = Stage.LOBBY
 
+    def end_of_round(self):
+        self.stage = Stage.LOBBY
+        self.count_points()
+
     def new_round(self):
         '''Resets variables to start a new round of dixit'''
         self.discard_pile.extend(self.table.values())
         s_teller_i = self.players.index(self.storyteller)
         self.storyteller = self.players[(s_teller_i + 1) % len(self.players)]
+
+        for user in self.lobby:
+            self.add_player(user)
+        self.lobby.clear()
 
         if len(self.draw_pile) < len(self.players): # if not enough cards
             shuffle(self.discard_pile)
