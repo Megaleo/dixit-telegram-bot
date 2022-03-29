@@ -283,7 +283,6 @@ def parse_cards(update, context):
     user_id, card_id = (int(i) for i in data.split(':'))
     logging.info(f'Parsing {user_id=}, {card_id=}, {user.first_name=}, '
                  f'{user.id=}')
-
     try:
         [player] = [p for p in dixit_game.players if p.id == user_id]
     except ValueError:
@@ -358,7 +357,7 @@ def end_of_round(update, context):
     for voter, voted in dixit_game.votes.items():
         grouped_votes.setdefault(voted, []).append(voter)
     for voted, voters in grouped_votes.items():
-       vote_list.append(f'{voters[0]} ---> {voted}')
+       vote_list.append(f'{voters[0]} \u27f6 {voted}') # bash can't handle char
        for voter in voters[1:]:
            vote_list.append(str(voter))
        vote_list.append('')
