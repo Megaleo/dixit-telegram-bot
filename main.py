@@ -265,6 +265,7 @@ def inline_callback(update, context):
                    )
                    for card in dixit_game.table.values()]
     else:
+        cards = dixit_game.table.values() if dixit_game.stage==3 else player.hand
         results = [InlineQueryResultPhoto(
                    id = str(uuid4()),
                    photo_url = card.url,
@@ -273,7 +274,7 @@ def inline_callback(update, context):
                    input_message_content = InputTextMessageContent(
                        f'{player} is impatient...')
                    )
-                   for card in player.hand]
+                   for card in cards]
 
     update.inline_query.answer(results, cache_time=0)
 
