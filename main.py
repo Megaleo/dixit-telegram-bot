@@ -11,6 +11,10 @@ from game import DixitGame
 '''
 TODO
 
+[ ] HIDE CARD ID. Even if we use blank-character wizardry, we should change the
+    ID of the card between when the storyteller and other players play the card
+    and when the other players choose.
+
 [ ] End game
     [ ] Implement criterion to end the game
     [ ] Improve the way results are shown; one of the fun parts of dixit is
@@ -36,6 +40,10 @@ TODO
         playing/voting.
     [ ] Define custom Exceptions?
     [ ] Create unit tests
+
+[ ] Localization
+    [ ] Store display messages in an external file
+    [ ] Implement ability to translate to other languages. Test with pt-BR
 
 '''
 
