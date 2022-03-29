@@ -222,10 +222,10 @@ class DixitGame:
         '''Implements traditional Dixit point counting'''
         player_points = Counter(self.votes.values())
         storyteller = self.storyteller
-        storyteller_wins = len(self.votes) > player_points[storyteller] > 0
-        player_points[storyteller] = 3 if storyteller_wins else 0
+        good_hint = len(self.votes) > player_points[storyteller] > 0
+        player_points[storyteller] = 3 if good_hint else 0
         for player, vote in self.votes.items():
-            player_points[player] += (2 + storyteller_wins)*(vote == storyteller)
+            player_points[player] += 3*(vote==storyteller) if good_hint else 2
         return player_points
 
     def count_points(self):
