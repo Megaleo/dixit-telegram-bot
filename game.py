@@ -229,8 +229,6 @@ class DixitGame:
         return player_points
 
     def count_points(self):
-        if self.stage != Stage.VOTE:
-            raise Exception('This is not the time to update the points')
         round_points = self.point_counter()
         for player in self.players:
             self.score.setdefault(player, [0, 0])
