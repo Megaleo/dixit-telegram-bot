@@ -105,6 +105,7 @@ class Player:
 
 
 class DixitGame:
+    '''The main class. Handles the game logic'''
     def __init__(self,
                  stage: Stage = Stage.LOBBY,
                  players: Optional[Player] = None,
@@ -164,7 +165,7 @@ class DixitGame:
         return [player.user for player in self.players]
 
     def add_player(self, player):
-        '''adds player to game. Makes it master if there wasn't one'''
+        '''Adds player to game. Makes it master if there wasn't one'''
         player = Player(player) if isinstance(player, User) else player
 
         if player in self.players:
@@ -182,7 +183,7 @@ class DixitGame:
         self.master = self.master or player
 
     def refill_hand(self, player, strict=False):
-        '''makes player hold `self.cards_per_player` cards again'''
+        '''Makes player hold `self.cards_per_player` cards again'''
         n_cards = self.cards_per_player - len(player.hand)
         if strict and n_cards!=1:
             raise HandError('Player should not be missing more than one card!')
@@ -194,6 +195,7 @@ class DixitGame:
 
     @classmethod
     def new_game(self, master):
+        '''Creates a new empty game, with shuffled cards and a master'''
         game_ids = list(range(1, 101))
         shuffle(game_ids)
         cards = [Card(n, id_) for n, id_ in enumerate(game_ids, start=1)]
@@ -203,13 +205,13 @@ class DixitGame:
         return game
 
     def start_game(self, master):
+        '''Makes draw pile, deals cards, chooses storyteller, starts the game'''
         if master != self.master.user:
             raise UserIsNotMasterError("Damn you, {user.first_name}! "
                     "You are not the master {dixit_game.master}!")
         if self.stage != Stage.LOBBY:
             raise GameAlreadyStartedError("Damn you, {user.first_name}! "
                     "The game has started already!")
-
         draw_pile = self.draw_pile
         for player in self.players:
             self.refill_hand(player)
@@ -217,26 +219,25 @@ class DixitGame:
         self.stage = Stage.STORYTELLER
 
     def storyteller_turn(self, card, clue):
+        '''Stores the given clue and card, advances stage'''
         self.clue = clue
         self.table[self.storyteller] = card
-        # self.storyteller.hand.remove(card) # its safe-ish to remove it later
         self.stage = Stage.PLAYERS
 
     def player_turns(self, player, card):
+        '''Stores player cards, advances stage when all have played'''
         self.table[player] = card
         if len(self.table) == len(self.players):
-            ## descomente para encher mesa até 6
-            # for i in range(6 - len(self.table)):
-            #     self.table[i] = self.draw_pile.pop()
             for player, card in self.table.items():
                 player.hand.remove(card)
             self.stage = Stage.VOTE
 
     def voting_turns(self, player, vote):
+        '''Stores which player each player thinks is the storyteller'''
         self.votes[player] = vote
 
     def point_counter(self):
-        '''Implements traditional Dixit point counting'''
+        '''Implements traditional Dixit point-counting'''
         player_points = Counter(self.votes.values())
         storyteller = self.storyteller
         good_hint = len(self.votes) > player_points[storyteller] > 0
@@ -246,6 +247,7 @@ class DixitGame:
         return player_points
 
     def count_points(self):
+        '''Counts and stores each players' [Total points, New points]'''
         round_points = self.point_counter()
         for player in self.players:
             self.score.setdefault(player, [0, 0])
@@ -257,6 +259,7 @@ class DixitGame:
         self.stage = Stage.LOBBY
 
     def end_of_round(self):
+        '''End of round tasks: Advance the stage and count the points'''
         self.stage = Stage.LOBBY
         self.count_points()
 

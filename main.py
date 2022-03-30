@@ -1,4 +1,4 @@
-from telegram.ext import (Updater, CommandHandler, InlineQueryHandler, 
+from telegram.ext import (Updater, CommandHandler, InlineQueryHandler,
                           MessageHandler, Filters)
 import logging
 from game import DixitGame
@@ -46,37 +46,26 @@ TODO
 @ensure_game(exists=False)
 @ensure_user_inactive
 def new_game_callback(update, context):
-    '''Command callback. When /newgame is called, it does the following:
-    1. Checks if there is an ongoing game
-    1.1. If not, creates a default DixitGame instance and stores it in
-        context.chat_data (See more about this in
-        https://github.com/python-telegram-bot/python-telegram-bot/wiki/Storing-bot,-user-and-chat-related-data#chat-migration,
-        and about making it persistent in the future in
-        https://github.com/python-telegram-bot/python-telegram-bot/wiki/Making-your-bot-persistent)
-    2. Loads cards into game with random _id's
-    3. Sets this user as master
-    4. Joins master user to the game IF they are not in other games
-    '''
+    '''Runs when /newgame is called. Creates an empty game and adds the master'''
     user = update.message.from_user
 
     logging.info("NEW GAME")
     logging.info("We're now at stage 0: Lobby!")
 
     dixit_game = DixitGame.new_game(master=user)
-
     context.chat_data['dixit_game'] = dixit_game
+
     send_message(f"Let's play Dixit!\nThe master {dixit_game.master} "
                   "has created a new game. \nClick /joingame to join and "
                   "/startgame to start playing!",
                   update, context)
 
+
 @ensure_game(exists=True)
 @ensure_user_inactive
 @handle_exceptions(TooManyPlayersError, UserAlreadyInGameError)
 def join_game_callback(update, context):
-    '''Command callback. When /joingame is called, it does the following:
-    1. Checks if user has already joined the game
-    1.1. If not, adds user who called it to the game's players list'''
+    '''Runs when /joingame is called. Adds the user to the game'''
     dixit_game = context.chat_data['dixit_game']
     user = update.message.from_user
     logging.info(f'{user.first_name=}, {user.id=} joined the game')
@@ -93,35 +82,25 @@ def join_game_callback(update, context):
 @ensure_game(exists=True)
 @handle_exceptions(HandError, UserIsNotMasterError, GameAlreadyStartedError)
 def start_game_callback(update, context):
-    '''Command callback. When /startgame is called, it does the following:
-    1. Distributes cards to players;
-    2. Chooses random storyteller
-    3. (For later) Messages button to prompt inline query;
-    4. Goes from stage 0 to 1.'''
+    '''Runs when /startgame is called. Does the final preparations for the game'''
     dixit_game = context.chat_data['dixit_game']
     user = update.message.from_user
-
     dixit_game.start_game(user) # can no longer log the chosen cards!
     send_message(f"The game has begun!", update, context)
-
     storytellers_turn(update, context)
 
 
 def storytellers_turn(update, context):
+    '''Instructs the storyteller to choose a clue and a card'''
     dixit_game = context.chat_data['dixit_game']
     logging.info("We're now at stage 1: Storyteller's turn!")
-
-    # Button to switch to inline for the player to see their cards
     send_message(f'{dixit_game.storyteller} is the storyteller!\n'
-                 'Please write a hint and click on a card.', update, context,
+                 'Please write a clue and click on a card.', update, context,
                  button='Click to see your cards!')
 
 
 def inline_callback(update, context):
-    '''Inline callback. It depends on the stage of the game:
-    If stage == 1 or 2, then show the player's cards
-    If stage == 3, then show chosen cards
-    Otherwise, do nothing'''
+    '''Decides what cards to show when a player makes an inline query'''
     user = update.inline_query.from_user
     [dixit_game] = find_user_games(context, user).values()
     [player] = [p for p in dixit_game.players if p.user == user]
@@ -148,7 +127,7 @@ def inline_callback(update, context):
 
 
 def parse_cards(update, context):
-    '''parses the user messages looking for the played cards'''
+    '''Parses the user messages and retrieves the player and the played card'''
     dixit_game = context.chat_data['dixit_game']
     user = update.message.from_user
     text = update.message.text
@@ -217,6 +196,7 @@ def parse_cards(update, context):
 
 
 def end_of_round(update, context):
+    '''Counts points, resets the appropriate variables for the next round'''
     dixit_game = context.chat_data['dixit_game']
 
     storyteller_card = dixit_game.table[dixit_game.storyteller]
@@ -246,6 +226,7 @@ def end_of_round(update, context):
 
 
 def run_bot(token):
+    '''Tells the bot to use the functions we've defined, starts the main loop'''
     updater = Updater(token, use_context=True)
     dispatcher = updater.dispatcher
 

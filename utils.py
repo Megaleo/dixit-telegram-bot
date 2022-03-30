@@ -7,8 +7,9 @@ import logging
 
 def send_message(text, update, context, button=None, **kwargs):
     '''Sends message to group chat specified in update and logs it. If the
-    button argument is passed, show the users a button with the specified
-    text, directing them to the current list of cards stored inline'''
+    button argument is passed, shows the users a button with the specified
+    text, directing them to the current list of cards stored inline.
+    '''
     markup = None
     if button is not None:
         keyboard = [[InlineKeyboardButton(button,
@@ -21,7 +22,7 @@ def send_message(text, update, context, button=None, **kwargs):
 
 
 def send_photo(photo_url, update, context, **kwargs):
-    '''Sends photo to group chat specified in update and logs that.'''
+    '''Sends photo to group chat specified in update and logs it.'''
     context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo_url,
                            **kwargs)
     logging.debug(f'Sent photo with url "{photo_url}" to chat '
@@ -29,8 +30,9 @@ def send_photo(photo_url, update, context, **kwargs):
 
 
 def get_active_games(context):
-    '''Returns all `DixitGame`'s that are in `context.dispatcher.chat_data`
-    as a dict of chat_id: dixit_game'''
+    '''Returns all `DixitGame`'s stored in `context.dispatcher.chat_data`
+    as a {chat_id: dixit_game} dict.
+    '''
     chat_data = context.dispatcher.chat_data
     if chat_data is not None:
         active_games = {chat_id: data['dixit_game'] for chat_id, data in
@@ -42,21 +44,17 @@ def get_active_games(context):
 
 def find_user_games(context, user):
     '''Finds the `chat_id`'s of the games where the `user` is playing.
-    Returns a dict of chat_id: dixit_game
-
-    This is useful to resolve the issue of the inline queries not having
-    the information about the chat from which it is requested.
-    With the information of the `chat_id`'s, we could either prohibit the
-    player from playing multiple games at once, or give him the choice of which
-    game they want to play at that time like the unobot does.'''
+    Returns a {chat_id: dixit_game} dict.
+    '''
     return {chat_id: dixit_game
             for chat_id, dixit_game in get_active_games(context).items()
             if user in dixit_game.users}
 
 
 def ensure_game(exists=True):
-    """Decorator to ensure a game exists before callbacks are made.
-    Reverse if exists is False"""
+    '''Decorator to ensure a game exists before callbacks are made.
+    Ensures the opposite if `exists= False`
+    '''
     def ensure_game_decorator(callback):
         @wraps(callback) # Preserve info about callback
         def safe_callback(update, context):
@@ -76,7 +74,7 @@ def ensure_game(exists=True):
 
 
 def ensure_user_inactive(callback):
-    """Decorator to ensure the user is not in another game"""
+    '''Decorator to ensure the user is not in another game'''
     @wraps(callback) # Preserve info about callback
     def safe_callback(update, context):
         user = update.message.from_user
@@ -89,6 +87,7 @@ def ensure_user_inactive(callback):
 
 
 def menu_card(card, player, text=None, clue=None):
+    '''Returns the specified card as an InlineQueryResultPhoto menu item'''
     text = text or f'{player.id}:{card.id}' + f'\n{clue}'*(clue is not None)
     return InlineQueryResultPhoto(
             id = str(uuid4()),
@@ -100,6 +99,9 @@ def menu_card(card, player, text=None, clue=None):
 
 
 def handle_exceptions(*exceptions):
+    '''Decorator that catches the listed exception and forwards their text
+    content to the chat specified in `context`.
+    '''
     def decorator(f):
         def msg_f(update, context, *args, **kwargs):
             subs = {'user': update.message.from_user,
