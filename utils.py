@@ -104,9 +104,17 @@ def handle_exceptions(*exceptions):
     '''
     def decorator(f):
         def msg_f(update, context, *args, **kwargs):
-            subs = {'user': update.message.from_user,
-                    'dixit_game': context.chat_data.get('dixit_game', None),
-                    }
+            user = update.message.from_user
+            dixit_game = context.chat_data.get('dixit_game', None)
+            try:
+                player = dixit_game.get_player_by_id(user.id)
+            except (AttributeError, UserDoesntExistError):
+                # dixit_game não definido OU player não existe
+                player = None
+
+            subs = {'user': user,
+                    'dixit_game': dixit_game,
+                    'player': player}
             try:
                 return f(update, context, *args, **kwargs)
             except exceptions as e:
