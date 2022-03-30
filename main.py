@@ -34,7 +34,7 @@ TODO
     [ ] Have dummy players to better debug the game alone. They would not be
         storytellers, but could just always choose a random card when
         playing/voting.
-    [ ] Define custom Exceptions?
+    [X] Define custom Exceptions?
     [ ] Create unit tests
 
 [ ] Localization
@@ -66,42 +66,32 @@ def new_game_callback(update, context):
 
     context.chat_data['dixit_game'] = dixit_game
     send_message(f"Let's play Dixit!\nThe master {dixit_game.master} "
-                  "has created a new game. Click /joingame to join and "
+                  "has created a new game. \nClick /joingame to join and "
                   "/startgame to start playing!",
                   update, context)
 
-
 @ensure_game(exists=True)
 @ensure_user_inactive
+@handle_exceptions(TooManyPlayersError, UserAlreadyInGameError)
 def join_game_callback(update, context):
     '''Command callback. When /joingame is called, it does the following:
     1. Checks if user has already joined the game
     1.1. If not, adds user who called it to the game's players list'''
     dixit_game = context.chat_data['dixit_game']
     user = update.message.from_user
-    if user in dixit_game.users:
-        send_message(f"Damn you, {user.first_name}! You have already joined "
-                      "the game!", update, context)
-        return
-    # Checks if there are enough cards for user to join
-    if len(dixit_game.players) >= dixit_game.max_players:
-        send_message("There are only enough cards in the game to supply "
-                     f"{dixit_game.max_players} players, unfortunately!",
-                     update, context)
-        # ask if they'd like to play with fewer cards per player?
-        return
-
     logging.info(f'{user.first_name=}, {user.id=} joined the game')
+
     dixit_game.add_player(user)
     if dixit_game.stage==0:
         text = f"{user.first_name} was added to the game!"
     else:
-        text = f"Welcome {user.first_name}! You  may play when a new "\
-                "rounds starts"
+        text = f"Welcome {user.first_name}! You may start playing when a new "\
+                "rounds begins"
     send_message(text, update, context)
 
 
 @ensure_game(exists=True)
+@handle_exceptions(HandError, UserIsNotMasterError, GameAlreadyStartedError)
 def start_game_callback(update, context):
     '''Command callback. When /startgame is called, it does the following:
     1. Distributes cards to players;
@@ -110,18 +100,9 @@ def start_game_callback(update, context):
     4. Goes from stage 0 to 1.'''
     dixit_game = context.chat_data['dixit_game']
     user = update.message.from_user
-    # Checks if it was the master who requested /startgame
-    if user != dixit_game.master.user:
-        send_message(f"Damn you, {user.first_name}! You are not the master "
-                     f"{dixit_game.master}!", update, context)
-        return
-    # Check if the game hadn't already been started
-    if dixit_game.stage != 0:
-        send_message(f"Damn you, {user.first_name}! The game has started "
-                     "already!", update, context)
-        return
+
+    dixit_game.start_game(user) # can no longer log the chosen cards!
     send_message(f"The game has begun!", update, context)
-    dixit_game.start_game() # can no longer log the chosen cards!
 
     storytellers_turn(update, context)
 
@@ -142,61 +123,27 @@ def inline_callback(update, context):
     If stage == 3, then show chosen cards
     Otherwise, do nothing'''
     user = update.inline_query.from_user
-    user_games = find_user_games(context, user)
-
-    if len(user_games) != 1:
-        return
-
-    [dixit_game] = user_games.values()
+    [dixit_game] = find_user_games(context, user).values()
     [player] = [p for p in dixit_game.players if p.user == user]
     storyteller = dixit_game.storyteller
+    table = dixit_game.table
 
     logging.info(f'Inline from {player!r}')
     logging.info(f'Player is {"not " * (player!=storyteller)}the storyteller')
 
+    text = clue = None
     if dixit_game.stage == 1 and player == storyteller:
-        given_clue = update.inline_query.query
-        results = [InlineQueryResultPhoto(
-                   id = str(uuid4()),
-                   photo_url = card.url,
-                   thumb_url = card.url,
-                   title = f"Card {card.id} in the storyteller's hand",
-                   input_message_content = InputTextMessageContent(
-                       f'{player.id}:{card.id}\n' + given_clue)
-                   )
-                   for card in player.hand]
+        clue = update.inline_query.query
+        cards = player.hand
     elif dixit_game.stage == 2 and player != storyteller:
-        results = [InlineQueryResultPhoto(
-                   id = str(uuid4()),
-                   photo_url = card.url,
-                   thumb_url = card.url,
-                   title = f"card {card.id} in the player's hand",
-                   input_message_content = InputTextMessageContent(
-                   f"{player.id}:{card.id}")
-                   )
-                   for card in player.hand]
+        cards = player.hand
     elif dixit_game.stage == 3 and player != storyteller:
-        results = [InlineQueryResultPhoto(
-                   id = str(uuid4()),
-                   photo_url = card.url,
-                   thumb_url = card.url,
-                   title = f"chosen card {card.id}",
-                   input_message_content = InputTextMessageContent(
-                   f"{player.id}:{card.id}")
-                   )
-                   for card in dixit_game.table.values()]
+        cards = table.values()
     else:
-        cards = dixit_game.table.values() if dixit_game.stage==3 else player.hand
-        results = [InlineQueryResultPhoto(
-                   id = str(uuid4()),
-                   photo_url = card.url,
-                   thumb_url = card.url,
-                   title = f"Card {card.id} in the player's hand",
-                   input_message_content = InputTextMessageContent(
-                       f'{player} is impatient...')
-                   )
-                   for card in cards]
+        cards = table.values() if dixit_game.stage==3 else player.hand
+        text = f'{player} is impatient...'
 
+    results = [menu_card(card, player, text, clue) for card in cards]
     update.inline_query.answer(results, cache_time=0)
 
 
