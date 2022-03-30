@@ -88,23 +88,27 @@ def ensure_user_inactive(callback):
     return safe_callback
 
 
-def menu_card(card, text=None):
-    text = text or f'{player.id}:{card.id}'
+def menu_card(card, player, text=None, clue=None):
+    text = text or f'{player.id}:{card.id}' + f'\n{clue}'*(clue is not None)
     return InlineQueryResultPhoto(
             id = str(uuid4()),
             photo_url = card.url,
             thumb_url = card.url,
-            title = f"Card {card.id} in the storyteller's hand",
+            title = f"Card {card.id} in {player}'s hand",
             input_message_content = InputTextMessageContent(text)
             )
 
 
-def message(*exceptions, text):
+def handle_exceptions(*exceptions):
     def decorator(f):
         def msg_f(update, context, *args, **kwargs):
+            subs = {'user': update.message.from_user,
+                    'dixit_game': context.chat_data.get('dixit_game', None),
+                    }
             try:
-                f(update, context, *args, **kwargs)
+                return f(update, context, *args, **kwargs)
             except exceptions as e:
-                send_message(str(e), update, context)
+                text = str(e).format(**subs)
+                send_message(text, update, context)
         return msg_f
     return decorator
