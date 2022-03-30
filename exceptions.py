@@ -7,7 +7,10 @@ class UserAlreadyInGameError(GameException):
 class TooManyPlayersError(GameException):
     pass
 
-class UserNotMasterError(GameException):
+class HandError(GameException):
+    pass
+
+class UserIsNotMasterError(GameException):
     pass
 
 class GameAlreadyStartedError(GameException):
@@ -30,4 +33,3 @@ class StageError(GameException):
 
 class CardHasNoSenderError(GameException):
     pass
-
