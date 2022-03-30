@@ -20,6 +20,7 @@ from telegram import User
 from collections import Counter
 from random import shuffle, choice
 from enum import IntEnum
+from exceptions import *
 
 '''
 TODO
@@ -164,8 +165,16 @@ class DixitGame:
 
     def add_player(self, player):
         '''adds player to game. Makes it master if there wasn't one'''
-        if isinstance(player, User):
-            player = Player(player)
+        player = Player(player) if isinstance(player, User) else player
+
+        if player in self.players:
+            raise UserAlreadyInGameError("Damn you, {user.first_name}! You have "
+                   "already joined the game!")
+        if len(self.players) >= self.max_players:
+           raise TooManyPlayersError("{user.first_name} Can't join the game! "
+                   "There are only enough cards to supply "
+                   "{dixit_game.max_players} players, unfortunately!")
+
         if self.stage == Stage.LOBBY:
             self.players.append(player)
         else:
@@ -176,9 +185,10 @@ class DixitGame:
         '''makes player hold `self.cards_per_player` cards again'''
         n_cards = self.cards_per_player - len(player.hand)
         if strict and n_cards!=1:
-            raise ValueError('Player should not be missing more than one card!')
+            raise HandError('Player should not be missing more than one card!')
         if n_cards < 0:
-            raise ValueError('Player has too many cards!')
+            raise HandError('Player has too many cards!')
+
         for _ in range(n_cards):
             player.hand.append(self.draw_pile.pop())
 
@@ -192,7 +202,14 @@ class DixitGame:
         game.add_player(master) # first player automatically master
         return game
 
-    def start_game(self):
+    def start_game(self, master):
+        if master != self.master.user:
+            raise UserIsNotMasterError("Damn you, {user.first_name}! "
+                    "You are not the master {dixit_game.master}!")
+        if self.stage != Stage.LOBBY:
+            raise GameAlreadyStartedError("Damn you, {user.first_name}! "
+                    "The game has started already!")
+
         draw_pile = self.draw_pile
         for player in self.players:
             self.refill_hand(player)
