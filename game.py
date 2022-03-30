@@ -218,8 +218,27 @@ class DixitGame:
         self.storyteller = choice(self.players)
         self.stage = Stage.STORYTELLER
 
-    def storyteller_turn(self, card, clue):
+    def get_player_by_id(self, player_id):
+        try:
+            [player] = [p for p in self.players if p.id == player_id]
+        except ValueError:
+            raise UserNotPlayingError('You, {user.first_name}, are not playing '
+                                      'the game!')
+        return player
+
+    def get_card_by_id(self, card_id):
+        try:
+            [card] = [c for c in self.cards if c.id == card_id]
+        except ValueError:
+            raise CardDoesntExistError("This card doesn't exist, {player}!")
+        return card
+
+    def storyteller_turn(self, player, card, clue):
         '''Stores the given clue and card, advances stage'''
+        if player != self.storyteller:
+            raise PlayerNotStorytellerError('{player} is not the storyteller!')
+        if not clue:
+            raise ClueNotGivenError('You forgot to give us a clue!')
         self.clue = clue
         self.table[self.storyteller] = card
         self.stage = Stage.PLAYERS
@@ -232,9 +251,23 @@ class DixitGame:
                 player.hand.remove(card)
             self.stage = Stage.VOTE
 
-    def voting_turns(self, player, vote):
-        '''Stores which player each player thinks is the storyteller'''
+    def voting_turns(self, player, card):
+        '''Gets card voted by each player and stores its sender in the `votes` dict.
+        Ends round when all have voted.
+        '''
+        try:
+            [sender] = [p for p in self.players if self.table[p] == card]
+        except ValueError:
+            raise CardHasNoSenderError('This card belongs to no one, {player}!')
+
         self.votes[player] = vote
+        if len(self.votes) == len(self.players)-1:
+            self.end_of_round()
+
+    def end_of_round(self):
+        '''End of round tasks: Advance the stage and count the points'''
+        self.stage = Stage.LOBBY
+        self.count_points()
 
     def point_counter(self):
         '''Implements traditional Dixit point-counting'''
@@ -257,11 +290,6 @@ class DixitGame:
         self.score = dict(sorted(self.score.items(), key=lambda x: x[1],
                                  reverse=True))
         self.stage = Stage.LOBBY
-
-    def end_of_round(self):
-        '''End of round tasks: Advance the stage and count the points'''
-        self.stage = Stage.LOBBY
-        self.count_points()
 
     def new_round(self):
         '''Resets variables to start a new round of dixit'''

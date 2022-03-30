@@ -103,6 +103,7 @@ def inline_callback(update, context):
     '''Decides what cards to show when a player makes an inline query'''
     user = update.inline_query.from_user
     [dixit_game] = find_user_games(context, user).values()
+
     [player] = [p for p in dixit_game.players if p.user == user]
     storyteller = dixit_game.storyteller
     table = dixit_game.table
@@ -126,6 +127,8 @@ def inline_callback(update, context):
     update.inline_query.answer(results, cache_time=0)
 
 
+@handle_exceptions(UserNotPlayingError, CardDoesntExistError, ClueNotGivenError
+                   PlayerNotStorytellerError, CardHasNoSenderError)
 def parse_cards(update, context):
     '''Parses the user messages and retrieves the player and the played card'''
     dixit_game = context.chat_data['dixit_game']
@@ -133,33 +136,19 @@ def parse_cards(update, context):
     text = update.message.text
 
     data, *clue = text.split('\n', maxsplit=1)
-    user_id, card_id = (int(i) for i in data.split(':'))
+    [clue] = clue or [''] # unpack clue, or make it '' if empty
+    user_id, card_id = map(int, data.split(':')) # data = "user_id:card_id"
+
     logging.info(f'Parsing {user_id=}, {card_id=}, {user.first_name=}, '
                  f'{user.id=}')
-    try:
-        [player] = [p for p in dixit_game.players if p.id == user_id]
-    except ValueError:
-        send_message(f'You, {user.first_name}, are not playing the game!',
-                     update, context)
-        return
-
-    try:
-        [card_sent] = [c for c in dixit_game.cards if c.id == card_id]
-    except ValueError:
-        send_message(f"This card doesn't exist, {player}!", update, context)
-        return
+    player = dixit_game.get_player_by_id(user_id)
+    card_sent = dixit_game.get_card_by_id(card_id)
 
     if dixit_game.stage == 1:
-        assert player == dixit_game.storyteller, "Player is not the storyteller"
+        dixit_game.storyteller_turn(player=player, card=card_sent, clue=clue)
 
-        if len(clue) != 1:
-            send_message(f'You forgot to give us a clue!', update, context)
-            return
-        [clue] = clue
         logging.info(f'{clue=}')
         logging.info("We're now at stage 2: others' turn!")
-
-        dixit_game.storyteller_turn(card=card_sent, clue=clue)
 
         send_message(f"Now, let the others send their cards!\n"
                      f"Clue: *{dixit_game.clue}*", update, context,
@@ -173,25 +162,17 @@ def parse_cards(update, context):
                      f"{len(dixit_game.players)}) cards on the table!")
         if dixit_game.stage == 3:
             logging.info("We're now at stage 3: vote!")
-
             send_message(f"Hear ye, hear ye! Time to vote!\n"
                          f"Clue: *{dixit_game.clue}*", update, context,
                          button='Click to see the table!',
                          parse_mode='Markdown')
 
     elif dixit_game.stage == 3:
-        try:
-            [sender] = [p for p in dixit_game.players
-                        if dixit_game.table[p]==card_sent]
-        except:
-            send_message('This card belongs to no one, {player}!')
-
-        dixit_game.voting_turns(player=player, vote=sender)
+        dixit_game.voting_turns(player=player, card=card_sent)
 
         logging.info(f"I've received ({len(dixit_game.votes)}/"
                      f"{len(dixit_game.players) - 1}) votes")
-        if len(dixit_game.votes) == len(dixit_game.players)-1:
-            dixit_game.end_of_round()
+        if dixit_game.stage == 0:
             end_of_round(update, context)
 
 
