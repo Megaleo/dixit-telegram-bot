@@ -82,7 +82,7 @@ def join_game_callback(update, context):
 @ensure_game(exists=True)
 @handle_exceptions(HandError, UserIsNotMasterError, GameAlreadyStartedError)
 def start_game_callback(update, context):
-    '''Runs when /startgame is called. Does the final preparations for the game'''
+    '''Runs when /startgame is called. Does final preparations for the game'''
     dixit_game = context.chat_data['dixit_game']
     user = update.message.from_user
     dixit_game.start_game(user) # can no longer log the chosen cards!
@@ -102,32 +102,38 @@ def storytellers_turn(update, context):
 def inline_callback(update, context):
     '''Decides what cards to show when a player makes an inline query'''
     user = update.inline_query.from_user
-    [dixit_game] = find_user_games(context, user).values()
+    user_games = find_user_games(context, user).values()
+
+    if len(user_games) != 1:
+        return
+
+    [dixit_game] = user_games
 
     [player] = [p for p in dixit_game.players if p.user == user]
     storyteller = dixit_game.storyteller
     table = dixit_game.table
+    stage = dixit_game.stage
 
     logging.info(f'Inline from {player!r}')
     logging.info(f'Player is {"not " * (player!=storyteller)}the storyteller')
 
     text = clue = None
-    if dixit_game.stage == 1 and player == storyteller:
+    if stage == 1 and player == storyteller:
         clue = update.inline_query.query
         cards = player.hand
-    elif dixit_game.stage == 2 and player != storyteller:
+    elif stage == 2 and player != storyteller:
         cards = player.hand
-    elif dixit_game.stage == 3 and player != storyteller:
+    elif stage == 3 and player != storyteller:
         cards = table.values()
     else:
-        cards = table.values() if dixit_game.stage==3 else player.hand
+        cards = table.values() if stage==3 else player.hand
         text = f'{player} is impatient...'
 
     results = [menu_card(card, player, text, clue) for card in cards]
     update.inline_query.answer(results, cache_time=0)
 
 
-@handle_exceptions(UserNotPlayingError, CardDoesntExistError, ClueNotGivenError
+@handle_exceptions(UserNotPlayingError, CardDoesntExistError, ClueNotGivenError,
                    PlayerNotStorytellerError, CardHasNoSenderError)
 def parse_cards(update, context):
     '''Parses the user messages and retrieves the player and the played card'''

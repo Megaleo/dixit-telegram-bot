@@ -108,7 +108,7 @@ def handle_exceptions(*exceptions):
             dixit_game = context.chat_data.get('dixit_game', None)
             try:
                 player = dixit_game.get_player_by_id(user.id)
-            except (AttributeError, UserDoesntExistError):
+            except (AttributeError, UserNotPlayingError):
                 # dixit_game não definido OU player não existe
                 player = None
 

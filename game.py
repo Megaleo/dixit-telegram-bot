@@ -95,6 +95,8 @@ class Player:
     def __eq__(self, other):
         # we could change self.user.id to self.id, so as to be able to compare
         # Players and Users, but it can get messy
+        if not isinstance(other, Player):
+            return False
         return self.user.id == other.user.id
 
     def __hash__(self):
@@ -260,7 +262,7 @@ class DixitGame:
         except ValueError:
             raise CardHasNoSenderError('This card belongs to no one, {player}!')
 
-        self.votes[player] = vote
+        self.votes[player] = sender
         if len(self.votes) == len(self.players)-1:
             self.end_of_round()
 
