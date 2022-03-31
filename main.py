@@ -58,7 +58,7 @@ def new_game_callback(update, context):
     send_message(f"Let's play Dixit!\nThe master {dixit_game.master} "
                   "has created a new game. \nClick /joingame to join and "
                   "/startgame to start playing!",
-                  update, context)
+                  context.bot, update.effective_chat.id)
 
 
 @ensure_game(exists=True)
@@ -76,7 +76,7 @@ def join_game_callback(update, context):
     else:
         text = f"Welcome {user.first_name}! You may start playing when a new "\
                 "rounds begins"
-    send_message(text, update, context)
+    send_message(text, context.bot, update.effective_chat.id)
 
 
 @ensure_game(exists=True)
@@ -86,7 +86,7 @@ def start_game_callback(update, context):
     dixit_game = context.chat_data['dixit_game']
     user = update.message.from_user
     dixit_game.start_game(user) # can no longer log the chosen cards!
-    send_message(f"The game has begun!", update, context)
+    send_message(f"The game has begun!", context.bot, update.effective_chat.id)
     storytellers_turn(update, context)
 
 
@@ -95,12 +95,12 @@ def storytellers_turn(update, context):
     dixit_game = context.chat_data['dixit_game']
     logging.info("We're now at stage 1: Storyteller's turn!")
     send_message(f'{dixit_game.storyteller} is the storyteller!\n'
-                 'Please write a clue and click on a card.', update, context,
+                 'Please write a clue and click on a card.', context.bot, update.effective_chat.id,
                  button='Click to see your cards!')
 
 
 def inline_callback(update, context):
-    '''Decides what cards to show when a player makes an inline query'''
+    '''Decides which cards to show when a player makes an inline query'''
     user = update.inline_query.from_user
     user_games = find_user_games(context, user).values()
 
@@ -157,7 +157,7 @@ def parse_cards(update, context):
         logging.info("We're now at stage 2: others' turn!")
 
         send_message(f"Now, let the others send their cards!\n"
-                     f"Clue: *{dixit_game.clue}*", update, context,
+                     f"Clue: *{dixit_game.clue}*", context.bot, update.effective_chat.id,
                      button='Click to see your cards!',
                      parse_mode='Markdown')
 
@@ -169,7 +169,7 @@ def parse_cards(update, context):
         if dixit_game.stage == 3:
             logging.info("We're now at stage 3: vote!")
             send_message(f"Hear ye, hear ye! Time to vote!\n"
-                         f"Clue: *{dixit_game.clue}*", update, context,
+                         f"Clue: *{dixit_game.clue}*", context.bot, update.effective_chat.id,
                          button='Click to see the table!',
                          parse_mode='Markdown')
 
@@ -188,8 +188,8 @@ def end_of_round(update, context):
 
     storyteller_card = dixit_game.table[dixit_game.storyteller]
 
-    send_message(f'The correct answer was...', update, context)
-    send_photo(storyteller_card.url, update, context)
+    send_message(f'The correct answer was...', context.bot, update.effective_chat.id)
+    send_photo(storyteller_card.url, context.bot, update.effective_chat.id)
 
     results = '\n'.join([f'{player.name}:  {Pts} ' + f'(+{pts})'*(pts!=0)
                          for player, (Pts, pts) in dixit_game.score.items()])
@@ -205,8 +205,8 @@ def end_of_round(update, context):
        vote_list.append('')
     votes = '\n'.join(vote_list)
 
-    send_message(results, update, context)
-    send_message(votes, update, context)
+    send_message(results, context.bot, update.effective_chat.id)
+    send_message(votes, context.bot, update.effective_chat.id)
 
     dixit_game.new_round()
     storytellers_turn(update, context)

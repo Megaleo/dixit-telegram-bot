@@ -47,6 +47,18 @@ TODO
     they made (Cards can be overwritten so long a new stage hasn't been triggered)
 '''
 
+class Sender:
+    '''Abstract class for something that is able to send, or print, or write a
+    message (a string) in some way. Yeah, it is as general as that, which means
+    that there is a better way of doing it.
+
+    Defaults self.send() to print()'''
+
+    def __init__(self):
+        pass
+
+    def send(self, text):
+        print(text)
 
 class Stage(IntEnum):
     LOBBY = 0
@@ -117,6 +129,7 @@ class DixitGame:
                  cards: List[Card] = None,
                  table: Mapping[Player, Card] = None, # Players' played cards
                  votes: Mapping[Player, Player] = None, # Players' voted storytll
+                 sender: Sender = None,
                  ):
         self._stage = stage
         self.players = players or []
@@ -131,6 +144,10 @@ class DixitGame:
         self.discard_pile = []
         self.score = dict.fromkeys(self.players, [0, 0])
         self.lobby = []
+        self._sender = sender or Sender()
+
+    def print(self, text, **kwargs):
+        self._sender.send(text, **kwargs)
 
     @property
     def stage(self):

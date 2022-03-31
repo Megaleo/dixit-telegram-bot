@@ -3,12 +3,17 @@ from telegram import InlineQueryResultPhoto, InputTextMessageContent
 from uuid import uuid4
 from functools import wraps
 from exceptions import *
+from game import Sender
 import logging
 
-def send_message(text, update, context, button=None, **kwargs):
+
+def send_message(text, bot, chat_id, button=None, **kwargs):
     '''Sends message to group chat specified in update and logs it. If the
-    button argument is passed, shows the users a button with the specified
-    text, directing them to the current list of cards stored inline.
+    button argument is passed, shows the users a button with a text specified
+    in the `button` argument.
+
+    In the case of the Dixit bot, we have been using the button to direct
+    the players to the current list of cards stored inline.
     '''
     markup = None
     if button is not None:
@@ -16,17 +21,33 @@ def send_message(text, update, context, button=None, **kwargs):
                      switch_inline_query_current_chat='')]]
         markup = InlineKeyboardMarkup(keyboard)
 
-    context.bot.send_message(chat_id=update.effective_chat.id, text=text,
-                             reply_markup=markup, **kwargs)
-    logging.debug(f'Sent message "{text}" to chat {update.effective_chat.id=}')
+    bot.send_message(chat_id=chat_id, text=text,
+                          reply_markup=markup, **kwargs)
+
+    logging.debug(f'Sent message "{text}" to chat {chat_id=}')
 
 
-def send_photo(photo_url, update, context, **kwargs):
+def send_photo(photo_url, bot, chat_id, **kwargs):
     '''Sends photo to group chat specified in update and logs it.'''
-    context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo_url,
+    bot.send_photo(chat_id=chat_id, photo=photo_url,
                            **kwargs)
-    logging.debug(f'Sent photo with url "{photo_url}" to chat '
-                  '{update.effective_chat.id=}')
+    logging.debug(f'Sent photo with url "{photo_url}" to chat {chat_id=}')
+
+
+class TelegramMessageSender(Sender):
+    ''' Encapsulates the action of sending a message or a photo through telegram
+    bot to a specific chat'''
+
+    def __init__(self, chat_id, bot):
+        super().__init__
+        self._chat_id = chat_id
+        self._bot = bot
+
+    def send(self, text, button=None, **kwargs):
+        send_message(text, self.bot, self.chat_id, button, **kwargs)
+
+    def send_photo(photo_url, **kwargs):
+        send_photo(photo_url, self.bot, self.chat_id, **kwargs)
 
 
 def get_active_games(context):
@@ -63,10 +84,10 @@ def ensure_game(exists=True):
             if ('dixit_game' in context.chat_data.keys()) != exists:
                 if exists:
                     send_message(f"Damn you, {user.first_name}! First, create a "
-                                  "new game with /newgame!", update, context)
+                                  "new game with /newgame!", context.bot, update.effective_chat.id)
                 else:
                     send_message(f"Damn you, {user.first_name}! There's a game "
-                                  "in progress already!", update, context)
+                                  "in progress already!", context.bot, update.effective_chat.id)
             else:
                 return callback(update, context)
         return safe_callback
@@ -80,7 +101,7 @@ def ensure_user_inactive(callback):
         user = update.message.from_user
         if find_user_games(context, user):
             send_message(f"Damn you, {user.first_name}! You are in another "
-                          "game already!", update, context)
+                          "game already!", context.bot, update.effective_chat.id)
         else:
             return callback(update, context)
     return safe_callback
@@ -119,6 +140,6 @@ def handle_exceptions(*exceptions):
                 return f(update, context, *args, **kwargs)
             except exceptions as e:
                 text = str(e).format(**subs)
-                send_message(text, update, context)
+                send_message(text, context.bot, update.effective_chat.id)
         return msg_f
     return decorator
