@@ -26,6 +26,8 @@ NICE-TO-HAVE'S -----------------------------------------------------------------
 
 [ ] Send reminders to late players, skip their turn if need be
 
+[ ] Initial data storage for game analysis 
+
 
 ACESSORIES ---------------------------------------------------------------------
 
