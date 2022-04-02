@@ -7,25 +7,30 @@ from utils import *
 '''
 TODO
 
+ESSENTIALS ---------------------------------------------------------------------
+
+[ ] Implement criteria to end the game
+[ ] Ask master whether to start a new game afterwards
+
+
+NICE-TO-HAVE'S ----------------------------------------------------------------- 
+
 [ ] HIDE CARD ID. Even if we use blank-character wizardry, we should change the
     ID of the card between when the storyteller and other players play the card
     and when the other players choose.
 
-[ ] End game
-    [ ] Implement criterion to end the game
-    [ ] Improve the way results are shown; one of the fun parts of dixit is
-        discussing whose answer each person has chosen
-        [X] Temporarily, show via text who voted on whose card
-    [X] Allow new players to join the game between rounds
-    [X] Show total and last round's points
+[ ] Improve the way results are shown; one of the fun parts of dixit is
+    discussing whose answer each person has chosen
 
-[X] Force InlineQuery to discard its cache and update itself even on empty
-    queries
+[ ] Allow player to join game in the middle of a match
+
+[ ] Send reminders to late players, skip their turn if need be
+
+
+ACESSORIES ---------------------------------------------------------------------
 
 [ ] Confirm that the player's chosen cards were available for choosing, at every
     stage?
-
-[X] Show user buttons to direct him to his cards automatically (vide Uno_Bot)
 
 [ ] Have the bot reply to the relevant message, instead of sending simple
     messages, when appropriate
@@ -34,7 +39,6 @@ TODO
     [ ] Have dummy players to better debug the game alone. They would not be
         storytellers, but could just always choose a random card when
         playing/voting.
-    [X] Define custom Exceptions?
     [ ] Create unit tests
 
 [ ] Localization
