@@ -15,12 +15,13 @@
 # (Show results of the game with points to each one)
 
 
-from typing import Optional, List, Mapping
+from typing import Optional, List, Mapping, Tuple
 from telegram import User
 from collections import Counter
 from random import shuffle, choice
 from enum import IntEnum
 from exceptions import *
+import copy
 
 '''
 TODO
@@ -105,6 +106,30 @@ class Player:
     def add_card(self, card):
         self.hand.append(card)
 
+class DixitResults:
+    '''Represent results of a round of Dixit.
+    It has:
+    - List with all players;
+    - Who is the storyteller;
+    - Who voted whom;
+    - Who player which card;
+    - What was the clue;
+    - Total points after the round and new points compared to the previous.
+    '''
+    def __init__(self,
+                 players: List[Player],
+                 storyteller: Player,
+                 votes: Mapping[Player, Player],
+                 table: Mapping[Player, Card],
+                 clue: str,
+                 score: Mapping[Player, Tuple[int, int]]
+                 ):
+        self.players = players
+        self.storyteller = storyteller
+        self.votes = votes
+        self.table = table
+        self.clue = clue
+        self.score = score
 
 class DixitGame:
     '''The main class. Handles the game logic'''
@@ -113,7 +138,7 @@ class DixitGame:
                  players: Optional[Player] = None,
                  master: Optional[Player] = None,
                  storyteller: Optional[Player] = None,
-                 clue: List[str] = None,
+                 clue: Optional[str] = None,
                  cards: List[Card] = None,
                  table: Mapping[Player, Card] = None, # Players' played cards
                  votes: Mapping[Player, Player] = None, # Players' voted storytll
@@ -271,6 +296,16 @@ class DixitGame:
         self.stage = Stage.LOBBY
         self.count_points()
 
+    def get_results(self) -> DixitResults:
+        '''Returns (a deepcopy of) the results in an instance of DixitResults'''
+        results = DixitResults(players=self.players,
+                               storyteller=self.storyteller,
+                               votes=self.votes,
+                               table=self.table,
+                               clue=self.clue,
+                               score=self.score)
+        return copy.deepcopy(results)
+
     def point_counter(self):
         '''Implements traditional Dixit point-counting'''
         player_points = Counter(self.votes.values())
@@ -282,10 +317,10 @@ class DixitGame:
         return player_points
 
     def count_points(self):
-        '''Counts and stores each players' [Total points, New points]'''
+        '''Counts and stores each players' (Total points, New points)'''
         round_points = self.point_counter()
         for player in self.players:
-            self.score.setdefault(player, [0, 0])
+            self.score.setdefault(player, (0, 0))
             self.score[player][0] += round_points.get(player, 0)
             self.score[player][1] = round_points.get(player, 0)
         # sort players by score
