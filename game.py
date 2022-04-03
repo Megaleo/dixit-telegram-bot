@@ -19,7 +19,7 @@ from typing import Optional, List, Mapping
 from telegram import User
 from collections import Counter
 from random import shuffle, choice
-from enum import IntEnum
+from enum import Enum, IntEnum
 from exceptions import *
 
 '''
@@ -53,6 +53,13 @@ class Stage(IntEnum):
     STORYTELLER = 1
     PLAYERS = 2
     VOTE = 3
+
+
+class EndCriterion(Enum):
+    LAST_CARD = 0
+    POINTS = 1
+    ROUNDS = 2
+    ENDLESS = 3 
 
 
 class Card:
@@ -117,6 +124,8 @@ class DixitGame:
                  cards: List[Card] = None,
                  table: Mapping[Player, Card] = None, # Players' played cards
                  votes: Mapping[Player, Player] = None, # Players' voted storytll
+                 end_criterion = EndCriterion.LAST_CARD,
+                 end_criterion_number = None,
                  ):
         self._stage = stage
         self.players = players or []
@@ -126,11 +135,16 @@ class DixitGame:
         self.cards = cards or []
         self.table = table or {}
         self.votes = votes or {}
+        self.end_criterion = end_criterion
+        self.end_criterion_number = end_criterion_number
         self._draw_pile = None
         self.cards_per_player = 6
         self.discard_pile = []
         self.score = dict.fromkeys(self.players, [0, 0])
         self.lobby = []
+        self.round_number = 0
+
+    end_criteria = EndCriterion
 
     @property
     def stage(self):
@@ -165,6 +179,16 @@ class DixitGame:
     @property
     def users(self):
         return [player.user for player in self.players]
+
+    def has_ended(self):
+        if self.end_criterion == EndCriterion.LAST_CARD:
+            return len(self.cards) < len(self.players) * self.cards_per_player
+        elif self.end_criterion == EndCriterion.POINTS:
+            scores = list(self.score.values)
+            return score[0] >= self.end_criterion_number
+        elif self.end_criterion == EndCriterion.ROUNDS:
+            return self.round_number >= self.end_criterion_number
+
 
     def add_player(self, player):
         '''Adds player to game. Makes it master if there wasn't one'''
@@ -295,6 +319,9 @@ class DixitGame:
 
     def new_round(self):
         '''Resets variables to start a new round of dixit'''
+        # if self.has_ended():
+        #     self.end_game()
+
         self.discard_pile.extend(self.table.values())
         s_teller_i = self.players.index(self.storyteller)
         self.storyteller = self.players[(s_teller_i + 1) % len(self.players)]
@@ -315,3 +342,5 @@ class DixitGame:
         self.table.clear()
         self.votes.clear()
         self.stage = Stage.STORYTELLER
+        self.round_number += 1
+
