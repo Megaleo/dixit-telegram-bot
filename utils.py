@@ -14,7 +14,7 @@ def send_message(text, update, context, button=None, **kwargs):
     button argument is passed, shows the users a button with the specified
     text, directing them to the current list of cards stored inline.
     '''
-    markup = None
+    markup = kwargs.pop('reply_markup', None)
     if button is not None:
         keyboard = [[InlineKeyboardButton(button,
                      switch_inline_query_current_chat='')]]
