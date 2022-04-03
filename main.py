@@ -217,6 +217,13 @@ def run_bot(token):
     updater = Updater(token, use_context=True)
     dispatcher = updater.dispatcher
 
+    solis = 26301886
+    leo = 549081529
+    thomas = 910002159
+
+    filename_png = get_profile_pic(updater.bot, thomas, size=TelegramPhotoSize.SMALL)
+    print(filename_png)
+
     # Add commands handlers
     command_callbacks = {'newgame': new_game_callback,
                          'joingame': join_game_callback,
