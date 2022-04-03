@@ -45,6 +45,11 @@ TODO
 
 [/] Be forgiving to mistakes: allow players to overwrite the cards and choices
     they made (Cards can be overwritten so long a new stage hasn't been triggered)
+
+[ ] Fix possible bug: in new_round, when checking if there are enough cards for
+    the next round, it is assumed no more than one card per player will be
+    needed. This might not be true if there are newcoming players who'll need a
+    whole hand.
 '''
 
 
@@ -184,8 +189,8 @@ class DixitGame:
         if self.end_criterion == EndCriterion.LAST_CARD:
             return len(self.cards) < len(self.players) * self.cards_per_player
         elif self.end_criterion == EndCriterion.POINTS:
-            scores = list(self.score.values)
-            return score[0] >= self.end_criterion_number
+            scores = [s[0] for s in list(self.score.values())]
+            return scores[0] >= self.end_criterion_number
         elif self.end_criterion == EndCriterion.ROUNDS:
             return self.round_number >= self.end_criterion_number
 

@@ -67,11 +67,12 @@ def new_game_callback(update, context):
                   "has created a new game. \nClick /joingame to join and "
                   "/startgame to start playing!",
                   update, context,)
-    
+
     send_message(f'Would you like the game to end based on what?',
                  update, context,
                  reply_markup = InlineKeyboardMarkup.from_column(
-                     [InlineKeyboardButton(text, callback_data=enum) 
+                     [InlineKeyboardButton(text, 
+                         callback_data=f'end settings:{enum}') 
                       for enum, text in zip(
                           [c.name for c in dixit_game.end_criteria], 
                           ('Until the cards end (official rule)', 
@@ -81,40 +82,50 @@ def new_game_callback(update, context):
                      )
 
 
-def settings_callback(update, context):
+def query_callback(update, context):
     dixit_game = context.chat_data['dixit_game']
     query = update.callback_query
-    query.answer(text='Settings saved!')
    
     if update.callback_query.from_user.id != dixit_game.master.id:
         return
+    
+    #if query_type == 'end settings':
+    if query.data.startswith('end settings'):
+        _, data = query.data.split(':')
+        query.answer(text='Settings saved!')
+        markup = None
+        if data == 'LAST_CARD':
+            text = 'Playing by the book, commendable!'
+        elif data == 'POINTS':
+            text = "Would you like to end the game whenever someone first "\
+                   "reaches how many points?"
+            markup = InlineKeyboardMarkup.from_row(
+                     [InlineKeyboardButton(n, callback_data=n) 
+                     for n in (3, 10, 25, 50, 100)]
+                     )
+        elif data == 'ROUNDS':
+            text = "How many rounds would you like the game to last?"
+            markup = InlineKeyboardMarkup.from_row(
+                     [InlineKeyboardButton(n, callback_data=n) 
+                     for n in (1, 3, 5, 10, 25)]
+                     )
+        elif data == 'ENDLESS':
+            text = 'And endless game, nice!'
 
-    markup = None
-    if query.data == 'LAST_CARD':
-        text = 'Playing by the book, commendable!'
-    elif query.data == 'POINTS':
-        text = "Would you like to end the game whenever someone first "\
-               "reaches how many points?"
-        markup = InlineKeyboardMarkup.from_row(
-                 [InlineKeyboardButton(n, callback_data=n) 
-                 for n in (3, 10, 25, 50, 100)]
-                 )
-    elif query.data == 'ROUNDS':
-        text = "How many rounds would you like the game to last?"
-        markup = InlineKeyboardMarkup.from_row(
-                 [InlineKeyboardButton(n, callback_data=n) 
-                 for n in (1, 3, 5, 10, 25)]
-                 )
-    elif query.data == 'ENDLESS':
-        text = 'And endless game, nice!'
-    elif query.data.isdecimal():
+        else:
+            raise ValueError(f'Invalid query!\n{query}')
+
+
+        if data in [c.name for c in dixit_game.end_criteria]:
+            dixit_game.end_criterion = dixit_game.end_criteria[data]
+        
+        query.edit_message_text(text=text, reply_markup=markup)
+
+    if query.data.isdecimal():
+        dixit_game.end_criterion_number = int(query.data)
         text = f'Alright! The game will last until the number of '\
                f'{dixit_game.end_criterion.name.lower()} is {query.data}!'
-
-    if query.data in [c.name for c in dixit_game.end_criteria]:
-        dixit_game.end_criterion = dixit_game.end_criteria[query.data]
-    
-    query.edit_message_text(text=text, reply_markup=markup)
+        query.edit_message_text(text=text)
 
 
 @ensure_game(exists=True)
@@ -267,13 +278,19 @@ def end_of_round(update, context):
     if dixit_game.has_ended():
         end_game(update, context)
 
-    dixit_game.new_round()
-    storytellers_turn(update, context)
+    else:
+        dixit_game.new_round()
+        storytellers_turn(update, context)
 
 
 def end_game(update, context):
-    send_message('Acaboooou, é o fiiiiiiim!', update, callback)
-
+    send_message('Acaboooou, é o fiiiiiiim!\nShall we play another round?',
+                 update, context,
+                 reply_markup = InlineKeyboardMarkup.from_column(
+                     [InlineKeyboardButton(text,
+                         callback_data=f'play again:{text=="Yes"}')
+                      for text in ('Yes', 'No')])
+                )
 
 
 def run_bot(token):
@@ -298,9 +315,8 @@ def run_bot(token):
     # I don't know why, but Filter.via_bot() isn't letting it pass...
     dispatcher.add_handler(message_handler)
 
-    # Add CallbackQueryHandler for the settings buttons
-    dispatcher.add_handler(CallbackQueryHandler(settings_callback))
-
+    # Add CallbackQueryHandler for the mid-chat buttons
+    dispatcher.add_handler(CallbackQueryHandler(query_callback))
 
     # Start the bot
     updater.start_polling()
