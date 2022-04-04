@@ -4,6 +4,7 @@
 
 token.txt
 tmp/
+*.ipynb
 
 ##############
 ### Python ###

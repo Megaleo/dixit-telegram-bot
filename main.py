@@ -3,6 +3,7 @@ from telegram.ext import (Updater, CommandHandler, InlineQueryHandler,
 import logging
 from game import DixitGame
 from utils import *
+from draw import save_results_pic
 
 '''
 TODO
@@ -54,6 +55,7 @@ ACESSORIES ---------------------------------------------------------------------
 def new_game_callback(update, context):
     '''Runs when /newgame is called. Creates an empty game and adds the master'''
     user = update.message.from_user
+    get_profile_pic(context.bot, user.id, size=TelegramPhotoSize.SMALL)
 
     logging.info("NEW GAME")
     logging.info("We're now at stage 0: Lobby!")
@@ -75,6 +77,7 @@ def join_game_callback(update, context):
     '''Runs when /joingame is called. Adds the user to the game'''
     dixit_game = context.chat_data['dixit_game']
     user = update.message.from_user
+    get_profile_pic(context.bot, user.id, size=TelegramPhotoSize.SMALL)
     logging.info(f'{user.first_name=}, {user.id=} joined the game')
 
     dixit_game.add_player(user)
@@ -214,13 +217,18 @@ def show_results_text(results, update, context):
     send_message(results_text, update, context)
     send_message(votes_text, update, context)
 
+def show_results_pic(results, update, context):
+    '''Sends results pic'''
+    results_fn = save_results_pic(results, n=len(context.chat_data['results']))
+    results_file = open(results_fn, 'rb')
+    send_photo(results_file, update, context)
 
 def end_of_round(update, context):
     '''Counts points, resets the appropriate variables for the next round'''
     dixit_game = context.chat_data['dixit_game']
     results = dixit_game.get_results()
     context.chat_data['results'].append(results)
-    show_results_text(results, update, context)
+    show_results_pic(results, update, context)
 
     dixit_game.new_round()
     storytellers_turn(update, context)
@@ -230,14 +238,6 @@ def run_bot(token):
     '''Tells the bot to use the functions we've defined, starts the main loop'''
     updater = Updater(token, use_context=True)
     dispatcher = updater.dispatcher
-
-    solis = 26301886
-    leo = 549081529
-    thomas = 910002159
-
-    get_profile_pic(updater.bot, thomas, size=TelegramPhotoSize.SMALL)
-    get_profile_pic(updater.bot, leo, size=TelegramPhotoSize.SMALL)
-    get_profile_pic(updater.bot, solis, size=TelegramPhotoSize.SMALL)
 
     # Add commands handlers
     command_callbacks = {'newgame': new_game_callback,

@@ -25,12 +25,16 @@ def send_message(text, update, context, button=None, **kwargs):
     logging.debug(f'Sent message "{text}" to chat {update.effective_chat.id=}')
 
 
-def send_photo(photo_url, update, context, **kwargs):
+def send_photo(photo, update, context, **kwargs):
     '''Sends photo to group chat specified in update and logs it.'''
-    context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo_url,
+    context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo,
                            **kwargs)
-    logging.debug(f'Sent photo with url "{photo_url}" to chat '
-                  '{update.effective_chat.id=}')
+    if isinstance(photo, str):
+        logging.debug(f'Sent photo "{photo}" to chat '
+                      '{update.effective_chat.id=}')
+    else:
+        logging.debug(f'Sent photo to chat '
+                      '{update.effective_chat.id=}')
 
 
 def get_active_games(context):
