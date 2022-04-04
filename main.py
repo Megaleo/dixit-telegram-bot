@@ -3,6 +3,7 @@ from telegram.ext import (Updater, CommandHandler, InlineQueryHandler,
 import logging
 from game import DixitGame
 from utils import *
+from draw import save_results_pic
 
 '''
 TODO
@@ -13,7 +14,7 @@ ESSENTIALS ---------------------------------------------------------------------
 [ ] Ask master whether to start a new game afterwards
 
 
-NICE-TO-HAVE'S ----------------------------------------------------------------- 
+NICE-TO-HAVE'S -----------------------------------------------------------------
 
 [ ] HIDE CARD ID. Even if we use blank-character wizardry, we should change the
     ID of the card between when the storyteller and other players play the card
@@ -26,7 +27,7 @@ NICE-TO-HAVE'S -----------------------------------------------------------------
 
 [ ] Send reminders to late players, skip their turn if need be
 
-[ ] Initial data storage for game analysis 
+[ ] Initial data storage for game analysis
 
 
 ACESSORIES ---------------------------------------------------------------------
@@ -54,12 +55,14 @@ ACESSORIES ---------------------------------------------------------------------
 def new_game_callback(update, context):
     '''Runs when /newgame is called. Creates an empty game and adds the master'''
     user = update.message.from_user
+    get_profile_pic(context.bot, user.id, size=TelegramPhotoSize.SMALL)
 
     logging.info("NEW GAME")
     logging.info("We're now at stage 0: Lobby!")
 
     dixit_game = DixitGame.new_game(master=user)
     context.chat_data['dixit_game'] = dixit_game
+    context.chat_data['results'] = []
 
     send_message(f"Let's play Dixit!\nThe master {dixit_game.master} "
                   "has created a new game. \nClick /joingame to join and "
@@ -74,6 +77,7 @@ def join_game_callback(update, context):
     '''Runs when /joingame is called. Adds the user to the game'''
     dixit_game = context.chat_data['dixit_game']
     user = update.message.from_user
+    get_profile_pic(context.bot, user.id, size=TelegramPhotoSize.SMALL)
     logging.info(f'{user.first_name=}, {user.id=} joined the game')
 
     dixit_game.add_player(user)
@@ -187,32 +191,44 @@ def parse_cards(update, context):
         if dixit_game.stage == 0:
             end_of_round(update, context)
 
-
-def end_of_round(update, context):
-    '''Counts points, resets the appropriate variables for the next round'''
-    dixit_game = context.chat_data['dixit_game']
-
-    storyteller_card = dixit_game.table[dixit_game.storyteller]
+def show_results_text(results, update, context):
+    '''Sends the image of the correct answer and send a message with
+    who voted in whom.'''
+    storyteller_card = results.table[results.storyteller]
 
     send_message(f'The correct answer was...', update, context)
     send_photo(storyteller_card.url, update, context)
 
-    results = '\n'.join([f'{player.name}:  {Pts} ' + f'(+{pts})'*(pts!=0)
-                         for player, (Pts, pts) in dixit_game.score.items()])
+    results_text = '\n'.join([f'{player.name}:  {total_pts} ' + \
+                              f'(+{results.delta_score[player]})'*(results.delta_score[player]!=0)
+                             for player, total_pts in results.score.items()])
 
     vote_list = []
     grouped_votes = {}
-    for voter, voted in dixit_game.votes.items():
+    for voter, voted in results.votes.items():
         grouped_votes.setdefault(voted, []).append(voter)
     for voted, voters in grouped_votes.items():
        vote_list.append(f'{voters[0]} \u27f6 {voted}') # bash can't handle char
        for voter in voters[1:]:
            vote_list.append(str(voter))
        vote_list.append('')
-    votes = '\n'.join(vote_list)
+    votes_text = '\n'.join(vote_list)
 
-    send_message(results, update, context)
-    send_message(votes, update, context)
+    send_message(results_text, update, context)
+    send_message(votes_text, update, context)
+
+def show_results_pic(results, update, context):
+    '''Sends results pic'''
+    results_fn = save_results_pic(results, n=len(context.chat_data['results']))
+    results_file = open(results_fn, 'rb')
+    send_photo(results_file, update, context)
+
+def end_of_round(update, context):
+    '''Counts points, resets the appropriate variables for the next round'''
+    dixit_game = context.chat_data['dixit_game']
+    results = dixit_game.get_results()
+    context.chat_data['results'].append(results)
+    show_results_pic(results, update, context)
 
     dixit_game.new_round()
     storytellers_turn(update, context)
