@@ -176,5 +176,5 @@ def get_profile_pic(bot, user_id, size):
 
     filename_jpg = f'tmp/pic_{user_id}.jpg'
     photo_file.download(custom_path=filename_jpg)
-    filename_png = convert_jpg_to_png(filename_jpg)
+    filename_png = convert_jpg_to_png(filename_jpg, delete_jpg=True)
     return filename_png

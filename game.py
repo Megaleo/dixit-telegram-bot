@@ -21,6 +21,7 @@ from collections import Counter
 from random import shuffle, choice
 from enum import IntEnum
 from exceptions import *
+from dataclasses import dataclass
 import copy
 
 '''
@@ -106,6 +107,7 @@ class Player:
     def add_card(self, card):
         self.hand.append(card)
 
+@dataclass(frozen=True)
 class DixitResults:
     '''Represent results of a round of Dixit.
     It has:
@@ -116,20 +118,13 @@ class DixitResults:
     - What was the clue;
     - Total points after the round and new points compared to the previous.
     '''
-    def __init__(self,
-                 players: List[Player],
-                 storyteller: Player,
-                 votes: Mapping[Player, Player],
-                 table: Mapping[Player, Card],
-                 clue: str,
-                 score: Mapping[Player, Tuple[int, int]]
-                 ):
-        self.players = players
-        self.storyteller = storyteller
-        self.votes = votes
-        self.table = table
-        self.clue = clue
-        self.score = score
+    players: List[Player]
+    storyteller: Player
+    votes: Mapping[Player, Player]
+    table: Mapping[Player, Card]
+    clue: str
+    score: Mapping[Player, int]
+    delta_score: Mapping[Player, int]
 
 class DixitGame:
     '''The main class. Handles the game logic'''
@@ -154,7 +149,8 @@ class DixitGame:
         self._draw_pile = None
         self.cards_per_player = 6
         self.discard_pile = []
-        self.score = dict.fromkeys(self.players, [0, 0])
+        self.score = dict.fromkeys(self.players, 0)
+        self.delta_score = dict.fromkeys(self.players, 0)
         self.lobby = []
 
     @property
@@ -294,6 +290,7 @@ class DixitGame:
     def end_of_round(self):
         '''End of round tasks: Advance the stage and count the points'''
         self.stage = Stage.LOBBY
+        self.point_counter()
         self.count_points()
 
     def get_results(self) -> DixitResults:
@@ -303,8 +300,10 @@ class DixitGame:
                                votes=self.votes,
                                table=self.table,
                                clue=self.clue,
-                               score=self.score)
-        return copy.deepcopy(results)
+                               score=self.score,
+                               delta_score=self.delta_score
+                               )
+        return results
 
     def point_counter(self):
         '''Implements traditional Dixit point-counting'''
@@ -314,15 +313,14 @@ class DixitGame:
         player_points[storyteller] = 3 if good_hint else 0
         for player, vote in self.votes.items():
             player_points[player] += 3*(vote==storyteller) if good_hint else 2
-        return player_points
+        for player in self.players:
+            self.delta_score[player] = player_points.get(player, 0)
 
     def count_points(self):
-        '''Counts and stores each players' (Total points, New points)'''
-        round_points = self.point_counter()
+        '''Adds delta_score to score, sorts it and goes to LOBBY phase'''
         for player in self.players:
-            self.score.setdefault(player, (0, 0))
-            self.score[player][0] += round_points.get(player, 0)
-            self.score[player][1] = round_points.get(player, 0)
+            self.score.setdefault(player, 0)
+            self.score[player] += self.delta_score.get(player, 0)
         # sort players by score
         self.score = dict(sorted(self.score.items(), key=lambda x: x[1],
                                  reverse=True))

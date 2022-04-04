@@ -196,8 +196,9 @@ def show_results_text(results, update, context):
     send_message(f'The correct answer was...', update, context)
     send_photo(storyteller_card.url, update, context)
 
-    results_text = '\n'.join([f'{player.name}:  {Pts} ' + f'(+{pts})'*(pts!=0)
-                             for player, (Pts, pts) in results.score.items()])
+    results_text = '\n'.join([f'{player.name}:  {total_pts} ' + \
+                              f'(+{results.delta_score[player]})'*(results.delta_score[player]!=0)
+                             for player, total_pts in results.score.items()])
 
     vote_list = []
     grouped_votes = {}
@@ -219,7 +220,7 @@ def end_of_round(update, context):
     dixit_game = context.chat_data['dixit_game']
     results = dixit_game.get_results()
     context.chat_data['results'].append(results)
-    show_results_text(results)
+    show_results_text(results, update, context)
 
     dixit_game.new_round()
     storytellers_turn(update, context)
@@ -234,8 +235,9 @@ def run_bot(token):
     leo = 549081529
     thomas = 910002159
 
-    filename_png = get_profile_pic(updater.bot, thomas, size=TelegramPhotoSize.SMALL)
-    print(filename_png)
+    get_profile_pic(updater.bot, thomas, size=TelegramPhotoSize.SMALL)
+    get_profile_pic(updater.bot, leo, size=TelegramPhotoSize.SMALL)
+    get_profile_pic(updater.bot, solis, size=TelegramPhotoSize.SMALL)
 
     # Add commands handlers
     command_callbacks = {'newgame': new_game_callback,
