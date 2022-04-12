@@ -60,7 +60,7 @@ def new_game_callback(update, context):
     logging.info("NEW GAME")
     logging.info("We're now at stage 0: Lobby!")
 
-    dixit_game = DixitGame.new_game(master=user)
+    dixit_game = DixitGame(master=user)
     context.chat_data['dixit_game'] = dixit_game
 
     send_message(f"Let's play Dixit!\nThe master {dixit_game.master} "
@@ -89,7 +89,6 @@ def query_callback(update, context):
     if update.callback_query.from_user.id != dixit_game.master.id:
         return
     
-    #if query_type == 'end settings':
     if query.data.startswith('end settings'):
         _, data = query.data.split(':')
         query.answer(text='Settings saved!')
@@ -121,11 +120,22 @@ def query_callback(update, context):
         
         query.edit_message_text(text=text, reply_markup=markup)
 
-    if query.data.isdecimal():
+    if query.data.isdecimal(): # if the user is sending us endgame values
         dixit_game.end_criterion_number = int(query.data)
         text = f'Alright! The game will last until the number of '\
                f'{dixit_game.end_criterion.name.lower()} is {query.data}!'
         query.edit_message_text(text=text)
+
+    if query.data.startswith('play again'):
+        print('Olá, estou jogando novamente!')
+        _, data = query.data.split(':')
+        if data == 'True':
+            query.edit_message_text(text='A new game of Dixit begins!')
+            dixit_game.restart_game()
+            storytellers_turn(update, context)
+        else:
+            context.chat_data.pop('dixit_game') # frees game data
+            del dixit_game
 
 
 @ensure_game(exists=True)
@@ -284,7 +294,7 @@ def end_of_round(update, context):
 
 
 def end_game(update, context):
-    send_message('Acaboooou, é o fiiiiiiim!\nShall we play another round?',
+    send_message('Shall we play another match?',
                  update, context,
                  reply_markup = InlineKeyboardMarkup.from_column(
                      [InlineKeyboardButton(text,

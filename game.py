@@ -34,7 +34,7 @@ TODO
 [X] Move all DixitGame-related operations when a new stage is started currently
     in main.py to methods of the class itself (DixitGame.voting_turn(),
     DixitGame.storyteller_turn(), etc.)
-    [X] start_game() (now new_game())
+    [X] start_game() (now new_game()) (now removed!)
     [X] play_game() (now start_game())
     [X] storytellers_turn()
     [X] player_turns()
@@ -137,7 +137,6 @@ class DixitGame:
         self._storyteller = storyteller
         self.master = master
         self.clue = clue
-        self.cards = cards or []
         self.table = table or {}
         self.votes = votes or {}
         self.end_criterion = end_criterion
@@ -147,7 +146,21 @@ class DixitGame:
         self.discard_pile = []
         self.score = dict.fromkeys(self.players, [0, 0])
         self.lobby = []
-        self.round_number = 0
+        self.round_number = 1
+        self.game_number = 1
+        
+        if cards is None:
+            game_ids = list(range(1, 101))
+            shuffle(game_ids)
+            cards = [Card(n, id_) for n, id_ in enumerate(game_ids, start=1)]
+            shuffle(cards)
+            self.cards = cards
+        
+        if isinstance(self.master, User):
+            self.master = Player(self.master)
+        if self.master is not None and self.master not in self.players:
+            self.players.append(self.master)
+
 
     end_criteria = EndCriterion
 
@@ -194,7 +207,6 @@ class DixitGame:
         elif self.end_criterion == EndCriterion.ROUNDS:
             return self.round_number >= self.end_criterion_number
 
-
     def add_player(self, player):
         '''Adds player to game. Makes it master if there wasn't one'''
         player = Player(player) if isinstance(player, User) else player
@@ -223,17 +235,6 @@ class DixitGame:
 
         for _ in range(n_cards):
             player.hand.append(self.draw_pile.pop())
-
-    @classmethod
-    def new_game(self, master):
-        '''Creates a new empty game, with shuffled cards and a master'''
-        game_ids = list(range(1, 101))
-        shuffle(game_ids)
-        cards = [Card(n, id_) for n, id_ in enumerate(game_ids, start=1)]
-        shuffle(cards)
-        game = self(cards=cards)
-        game.add_player(master) # first player automatically master
-        return game
 
     def start_game(self, master):
         '''Makes draw pile, deals cards, chooses storyteller, starts the game'''
@@ -322,12 +323,8 @@ class DixitGame:
                                  reverse=True))
         self.stage = Stage.LOBBY
 
-    def new_round(self):
-        '''Resets variables to start a new round of dixit'''
-        # if self.has_ended():
-        #     self.end_game()
-
-        self.discard_pile.extend(self.table.values())
+    def housekeeping(self):
+        '''Common variable operations'''
         s_teller_i = self.players.index(self.storyteller)
         self.storyteller = self.players[(s_teller_i + 1) % len(self.players)]
 
@@ -335,17 +332,38 @@ class DixitGame:
             self.add_player(user)
         self.lobby.clear()
 
+        self.results = None
+        self.clue = None
+        self.table.clear()
+        self.votes.clear()
+        self.stage = Stage.STORYTELLER
+
+    def new_round(self):
+        '''Resets variables to start a new round of dixit'''
+        self.discard_pile.extend(self.table.values())
+        self.housekeeping()
         if len(self.draw_pile) < len(self.players): # if not enough cards
             shuffle(self.discard_pile)
             self.draw_pile.extend(self.discard_pile)
             self.discard_pile.clear()
-
         for player in self.players:
             self.refill_hand(player)
-
-        self.results = None
-        self.table.clear()
-        self.votes.clear()
-        self.stage = Stage.STORYTELLER
         self.round_number += 1
+
+    def restart_game(self):
+        '''Resets variables to restart the game of dixit'''
+        self.housekeeping()
+        game_ids = list(range(1, 101)) 
+        shuffle(game_ids)
+        cards = [Card(n, id_) for n, id_ in enumerate(game_ids, start=1)]
+        shuffle(cards)
+        self.cards = cards
+        self._draw_pile = self.cards.copy()
+        self.score = dict.fromkeys(self.players, [0, 0])
+        self.round_number = 1
+        self.game_number += 1
+        self.discard_pile.clear()
+        for player in self.players:
+            player.hand.clear()
+            self.refill_hand(player)
 
