@@ -66,7 +66,7 @@ class EndCriterion(Enum):
     LAST_CARD = 0
     POINTS = 1
     ROUNDS = 2
-    ENDLESS = 3 
+    ENDLESS = 3
 
 
 class Card:
@@ -169,14 +169,14 @@ class DixitGame:
         self.lobby = []
         self.round_number = 1
         self.game_number = 1
-        
+
         if cards is None:
             game_ids = list(range(1, 101))
             shuffle(game_ids)
             cards = [Card(n, id_) for n, id_ in enumerate(game_ids, start=1)]
             shuffle(cards)
             self.cards = cards
-        
+
         if isinstance(self.master, User):
             self.master = Player(self.master)
         if self.master is not None and self.master not in self.players:
@@ -385,7 +385,7 @@ class DixitGame:
     def restart_game(self):
         '''Resets variables to restart the game of dixit'''
         self.housekeeping()
-        game_ids = list(range(1, 101)) 
+        game_ids = list(range(1, 101))
         shuffle(game_ids)
         cards = [Card(n, id_) for n, id_ in enumerate(game_ids, start=1)]
         shuffle(cards)
