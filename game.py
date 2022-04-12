@@ -223,8 +223,7 @@ class DixitGame:
         if self.end_criterion == EndCriterion.LAST_CARD:
             return len(self.cards) < len(self.players) * self.cards_per_player
         elif self.end_criterion == EndCriterion.POINTS:
-            scores = [s[0] for s in list(self.score.values())]
-            return scores[0] >= self.end_criterion_number
+            return self.scores[0] >= self.end_criterion_number
         elif self.end_criterion == EndCriterion.ROUNDS:
             return self.round_number >= self.end_criterion_number
 
@@ -357,7 +356,7 @@ class DixitGame:
         self.stage = Stage.LOBBY
 
     def housekeeping(self):
-        '''Common variable operations'''
+        '''Shared variable operations at the end of round and game'''
         s_teller_i = self.players.index(self.storyteller)
         self.storyteller = self.players[(s_teller_i + 1) % len(self.players)]
 
