@@ -34,7 +34,7 @@ NICE-TO-HAVE'S -----------------------------------------------------------------
 
 [ ] Use improved card images
 
-[ ] Prevent players from voting on their own cards
+[x] Prevent players from voting for their own cards
 
 ACESSORIES ---------------------------------------------------------------------
 
@@ -222,7 +222,7 @@ def inline_callback(update, context):
 
 
 @handle_exceptions(UserNotPlayingError, CardDoesntExistError, ClueNotGivenError,
-                   PlayerNotStorytellerError, CardHasNoSenderError)
+                   PlayerNotStorytellerError, CardHasNoSenderError, VotingError)
 def parse_cards(update, context):
     '''Parses the user messages and retrieves the player and the played card'''
     dixit_game = context.chat_data['dixit_game']
@@ -271,7 +271,7 @@ def parse_cards(update, context):
 
 def show_results_text(results, update, context):
     '''Sends the image of the correct answer and send a message with
-    who voted in whom.'''
+    who voted for whom.'''
     storyteller_card = results.table[results.storyteller]
     score = results.score
     delta_score = results.delta_score

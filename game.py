@@ -305,14 +305,15 @@ class DixitGame:
             self.stage = Stage.VOTE
 
     def voting_turns(self, player, card):
-        '''Gets card voted by each player and stores its sender in the `votes` dict.
-        Ends round when all have voted.
+        '''Gets card voted by each player and stores its sender in the `votes`
+        dict. Ends round when all have voted.
         '''
         try:
             [sender] = [p for p in self.players if self.table[p] == card]
         except ValueError:
             raise CardHasNoSenderError('This card belongs to no one, {player}!')
-
+        if sender == player:
+            raise VotingError("You can't vote for your own card, {player}!")
         self.votes[player] = sender
         if len(self.votes) == len(self.players)-1:
             self.end_of_round()

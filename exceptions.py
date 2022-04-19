@@ -33,3 +33,6 @@ class StageError(GameException):
 
 class CardHasNoSenderError(GameException):
     pass
+
+class VotingError(GameException):
+    pass
