@@ -12,7 +12,7 @@ TODO
 ESSENTIALS ---------------------------------------------------------------------
 
 [X] Implement criteria to end the game
-[ ] Ask master whether to start a new game afterwards
+[X] Ask master whether to start a new game afterwards
 
 
 NICE-TO-HAVE'S -----------------------------------------------------------------
@@ -21,7 +21,7 @@ NICE-TO-HAVE'S -----------------------------------------------------------------
     ID of the card between when the storyteller and other players play the card
     and when the other players choose.
 
-[ ] Improve the way results are shown; one of the fun parts of dixit is
+[/] Improve the way results are shown; one of the fun parts of dixit is
     discussing whose answer each person has chosen
 
 [ ] Allow player to join game in the middle of a match
@@ -32,6 +32,10 @@ NICE-TO-HAVE'S -----------------------------------------------------------------
 
 [ ] Let the master manually input the max number of rounds/point
 
+[ ] Use improved card images
+
+[ ] Prevent players from voting on their own cards
+
 ACESSORIES ---------------------------------------------------------------------
 
 [ ] Confirm that the player's chosen cards were available for choosing, at every
@@ -39,6 +43,9 @@ ACESSORIES ---------------------------------------------------------------------
 
 [ ] Have the bot reply to the relevant message, instead of sending simple
     messages, when appropriate
+
+[ ] In case a user was already in a game, make it clear whether it's this in
+    this same game or in another.
 
 [ ] Debugging
     [ ] Have dummy players to better debug the game alone. They would not be

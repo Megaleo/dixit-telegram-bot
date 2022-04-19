@@ -119,6 +119,7 @@ class Player:
     def add_card(self, card):
         self.hand.append(card)
 
+
 @dataclass(frozen=True)
 class DixitResults:
     '''Represent results of a round of Dixit.
@@ -137,6 +138,7 @@ class DixitResults:
     clue: str
     score: Mapping[Player, int]
     delta_score: Mapping[Player, int]
+
 
 class DixitGame:
     '''The main class. Handles the game logic'''
@@ -181,7 +183,6 @@ class DixitGame:
             self.master = Player(self.master)
         if self.master is not None and self.master not in self.players:
             self.players.append(self.master)
-
 
     end_criteria = EndCriterion
 
