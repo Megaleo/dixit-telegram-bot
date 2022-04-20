@@ -28,18 +28,15 @@ class TestDixitGame:
         dixit.start_game(dixit.master.user)
 
     def storyteller_turn(self, dixit):
-        self.start_game(dixit)
         st_card = dixit.storyteller.hand[0]
         dixit.storyteller_turn(dixit.storyteller, st_card, 'the clue')
 
     def player_turns(self, dixit):
-        self.storyteller_turn(dixit)
         for player in [p for p in dixit.players if p!=dixit.storyteller]:
             card = player.hand[0]
             dixit.player_turns(player, card)
 
     def voting_turns(self, dixit):
-        self.player_turns(dixit)
         players = [p for p in dixit.players if p != dixit.storyteller]
         print(dixit.table)
         for player, vote in zip(players, players[1:] + [players[0]]):
@@ -84,35 +81,41 @@ class TestDixitGame:
 
     def test_storyteller_turn(self, dixit):
         self.start_game(dixit)
-        card = dixit.storyteller.hand[0]
+
         assert dixit.stage == game.Stage.STORYTELLER
+        card = dixit.storyteller.hand[0]
         with pytest.raises(ClueNotGivenError):
             dixit.storyteller_turn(dixit.storyteller, card, None)
-        dixit.storyteller_turn(dixit.storyteller, card, 'the clue')
+
+        self.storyteller_turn(dixit)
         assert dixit.clue == 'the clue'
         assert list(dixit.table.items()) == [(dixit.storyteller, card)]
         assert dixit.stage == game.Stage.PLAYERS
 
     def test_player_turns(self, dixit):
+        self.start_game(dixit)
         self.storyteller_turn(dixit)
-        for player in [p for p in dixit.players if p!=dixit.storyteller]:
-            card = player.hand[0]
-            dixit.player_turns(player, card)
+
+        assert dixit.stage == game.Stage.PLAYERS
+
+        self.player_turns(dixit)
         assert dixit.stage == game.Stage.VOTE
         assert len(dixit.table) == len(dixit.players)
         for player, card in dixit.table.items():
             assert card not in player.hand
 
     def test_voting_turns(self, dixit):
+        self.start_game(dixit)
+        self.storyteller_turn(dixit)
         self.player_turns(dixit)
+
         assert dixit.stage == game.Stage.VOTE
         with pytest.raises(CardHasNoSenderError):
             dixit.voting_turns(dixit.master, game.Card(-1, -1))
         with pytest.raises(VotingError):
             dixit.voting_turns(dixit.master, dixit.table[dixit.master])
-        players = [p for p in dixit.players if p != dixit.storyteller]
-        for player, vote in zip(players, players[1:] + [players[0]]):
-            dixit.voting_turns(player, dixit.table[vote])
+
+        self.voting_turns(dixit)
         assert dixit.stage == game.Stage.LOBBY
         assert len(dixit.votes) == len(dixit.players) - 1
 
@@ -124,7 +127,11 @@ class TestDixitGame:
 
     def test_new_round(self, dixit):
         '''improve me!'''
+        self.start_game(dixit)
+        self.storyteller_turn(dixit)
+        self.player_turns(dixit)
         self.voting_turns(dixit)
+
         old_round_number = dixit.round_number
         dixit.new_round()
         assert dixit.clue == None
@@ -137,7 +144,11 @@ class TestDixitGame:
 
     def test_restart_game(self, dixit):
         '''improve me!'''
+        self.start_game(dixit)
+        self.storyteller_turn(dixit)
+        self.player_turns(dixit)
         self.voting_turns(dixit)
+
         dixit.restart_game()
         assert dixit.clue == None
         assert dixit.table == {}
