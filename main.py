@@ -364,3 +364,6 @@ if __name__ == '__main__':
     with open('token.txt', 'r') as token_file:
         token = token_file.readline().strip() # Remove \n at the end
     run_bot(token)
+    while True:
+        command = input('telegram-bot $ ')
+        exec(command)
