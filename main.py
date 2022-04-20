@@ -73,7 +73,7 @@ def new_game_callback(update, context):
     context.chat_data['dixit_game'] = dixit_game
     context.chat_data['results'] = []
 
-    send_message(f"Let's play Dixit!\n
+    send_message(f"Let's play Dixit!\n"
                  f"The master {dixit_game.master} has created a new game. \n"
                  "Click /joingame to join and /startgame to start playing!",
                  update, context,)

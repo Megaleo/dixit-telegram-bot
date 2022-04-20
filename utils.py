@@ -177,6 +177,9 @@ def get_profile_pic(bot, user_id, size):
         logging.warning(f'Could not get profile photo of user with id {user_id}.'
                         f'TelegramError raised with message: {str(e)}')
         return False
+    
+    if not os.path.isdir('tmp'):
+        os.makedirs('tmp')
 
     filename_jpg = f'tmp/pic_{user_id}.jpg'
     photo_file.download(custom_path=filename_jpg)
