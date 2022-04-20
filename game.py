@@ -52,6 +52,8 @@ TODO
     the next round, it is assumed no more than one card per player will be
     needed. This might not be true if there are newcoming players who'll need a
     whole hand.
+
+[ ] Move storyteller selection to DixitGame's __init__
 '''
 
 
@@ -179,6 +181,8 @@ class DixitGame:
             shuffle(cards)
             self.cards = cards
 
+        if self.master is None and self.players:
+            self.master = self.players[0]
         if isinstance(self.master, User):
             self.master = Player(self.master)
         if self.master is not None and self.master not in self.players:
@@ -366,7 +370,6 @@ class DixitGame:
             self.add_player(user)
         self.lobby.clear()
 
-        self.results = None
         self.clue = None
         self.table.clear()
         self.votes.clear()
