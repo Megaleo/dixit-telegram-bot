@@ -228,7 +228,7 @@ class DixitGame:
         if self.end_criterion == EndCriterion.LAST_CARD:
             return len(self.cards) < len(self.players) * self.cards_per_player
         elif self.end_criterion == EndCriterion.POINTS:
-            return self.scores[0] >= self.end_criterion_number
+            return self.score[0] >= self.end_criterion_number
         elif self.end_criterion == EndCriterion.ROUNDS:
             return self.round_number >= self.end_criterion_number
 
