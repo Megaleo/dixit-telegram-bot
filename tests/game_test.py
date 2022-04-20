@@ -38,7 +38,6 @@ class TestDixitGame:
 
     def voting_turns(self, dixit):
         players = [p for p in dixit.players if p != dixit.storyteller]
-        print(dixit.table)
         for player, vote in zip(players, players[1:] + [players[0]]):
             dixit.voting_turns(player, dixit.table[vote])
 
