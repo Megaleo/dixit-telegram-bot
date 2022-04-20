@@ -80,6 +80,7 @@ class TestDixitGame:
         assert dixit.stage == game.Stage.STORYTELLER
 
     def test_storyteller_turn(self, dixit):
+        # context
         self.start_game(dixit)
 
         assert dixit.stage == game.Stage.STORYTELLER
@@ -93,6 +94,7 @@ class TestDixitGame:
         assert dixit.stage == game.Stage.PLAYERS
 
     def test_player_turns(self, dixit):
+        # context
         self.start_game(dixit)
         self.storyteller_turn(dixit)
 
@@ -105,6 +107,7 @@ class TestDixitGame:
             assert card not in player.hand
 
     def test_voting_turns(self, dixit):
+        # context
         self.start_game(dixit)
         self.storyteller_turn(dixit)
         self.player_turns(dixit)
@@ -127,6 +130,7 @@ class TestDixitGame:
 
     def test_new_round(self, dixit):
         '''improve me!'''
+        # context
         self.start_game(dixit)
         self.storyteller_turn(dixit)
         self.player_turns(dixit)
@@ -144,6 +148,7 @@ class TestDixitGame:
 
     def test_restart_game(self, dixit):
         '''improve me!'''
+        # context
         self.start_game(dixit)
         self.storyteller_turn(dixit)
         self.player_turns(dixit)
