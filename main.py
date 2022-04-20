@@ -1,7 +1,9 @@
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (Updater, CommandHandler, InlineQueryHandler,
                           MessageHandler, Filters, CallbackQueryHandler)
+from telegram.error import Unauthorized, InvalidToken
 import logging
+import sys
 from game import DixitGame
 from utils import *
 from draw import save_results_pic
@@ -361,9 +363,24 @@ def run_bot(token):
 if __name__ == '__main__':
     logging_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     logging.basicConfig(format=logging_format, level=logging.INFO)
-    with open('token.txt', 'r') as token_file:
-        token = token_file.readline().strip() # Remove \n at the end
-    run_bot(token)
+    tokenpath = 'token.txt'
+    with open(tokenpath, 'r') as token_file:
+        try:
+            n = int(sys.argv[1]) # Token number in token.txt
+        except (ValueError, IndexError):
+            n = 0 # Default to first token
+
+        try:
+            token = token_file.readlines()[n].strip() # Remove \n at the end
+            run_bot(token)
+        except IndexError as e:
+            logging.error(f'No token number {n} in {tokenpath}')
+            sys.exit(2)
+        except (InvalidToken, Unauthorized) as e:
+            logging.error(f'Broken token {token}:')
+            logging.error(e)
+            sys.exit(2)
+
     while True:
         command = input('telegram-bot $ ')
         exec(command)
