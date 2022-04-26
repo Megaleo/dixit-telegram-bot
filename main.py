@@ -1,4 +1,4 @@
-from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import User, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (Updater, CommandHandler, InlineQueryHandler,
                           MessageHandler, Filters, CallbackQueryHandler)
 from telegram.error import Unauthorized, InvalidToken
@@ -7,6 +7,7 @@ import sys
 from game import DixitGame
 from utils import *
 from draw import save_results_pic
+from random import choice
 
 '''
 TODO
@@ -94,62 +95,6 @@ def new_game_callback(update, context):
                      )
 
 
-def query_callback(update, context):
-    dixit_game = context.chat_data['dixit_game']
-    query = update.callback_query
-
-    if update.callback_query.from_user.id != dixit_game.master.id:
-        return
-
-    if query.data.startswith('end settings'):
-        _, data = query.data.split(':')
-        query.answer(text='Settings saved!')
-        markup = None
-        if data == 'LAST_CARD':
-            text = 'Playing by the book, commendable!'
-        elif data == 'POINTS':
-            text = "Would you like to end the game whenever someone first "\
-                   "reaches how many points?"
-            markup = InlineKeyboardMarkup.from_row(
-                     [InlineKeyboardButton(n, callback_data=n)
-                     for n in (3, 10, 25, 50, 100)]
-                     )
-        elif data == 'ROUNDS':
-            text = "How many rounds would you like the game to last?"
-            markup = InlineKeyboardMarkup.from_row(
-                     [InlineKeyboardButton(n, callback_data=n)
-                     for n in (1, 3, 5, 10, 25)]
-                     )
-        elif data == 'ENDLESS':
-            text = 'And endless game, nice!'
-
-        else:
-            raise ValueError(f'Invalid query!\n{query}')
-
-
-        if data in [c.name for c in dixit_game.end_criteria]:
-            dixit_game.end_criterion = dixit_game.end_criteria[data]
-
-        query.edit_message_text(text=text, reply_markup=markup)
-
-    if query.data.isdecimal(): # if the user is sending us endgame values
-        dixit_game.end_criterion_number = int(query.data)
-        text = f'Alright! The game will last until the number of '\
-               f'{dixit_game.end_criterion.name.lower()} is {query.data}!'
-        query.edit_message_text(text=text)
-
-    if query.data.startswith('play again'):
-        print('Olá, estou jogando novamente!')
-        _, data = query.data.split(':')
-        if data == 'True':
-            query.edit_message_text(text='A new game of Dixit begins!')
-            dixit_game.restart_game()
-            storytellers_turn(update, context)
-        else:
-            context.chat_data.pop('dixit_game') # frees game data
-            del dixit_game
-
-
 @ensure_game(exists=True)
 @ensure_user_inactive
 @handle_exceptions(TooManyPlayersError, UserAlreadyInGameError)
@@ -174,7 +119,27 @@ def join_game_callback(update, context):
 def start_game_callback(update, context):
     '''Runs when /startgame is called. Does final preparations for the game'''
     dixit_game = context.chat_data['dixit_game']
+    added_dummies = context.chat_data.get('added_dummies', False)
     user = update.message.from_user
+    if len(dixit_game.players) < 3: 
+        if not added_dummies:
+            send_message("There are fewer than 3 players in the game.\n"
+                         "How much dummies do you want to add?", update, context,
+                         reply_markup = InlineKeyboardMarkup.from_row(
+                             [InlineKeyboardButton(text=str(n),
+                                 callback_data=f'dummies settings:{n}')
+                              for n in range(5)
+                             ])
+                        )
+            return        
+        elif len(dixit_game.players) == 2:
+            send_message("Playing with two players is not fun... but ok :)", 
+                         update, context)
+        elif len(dixit_game.players) == 1:
+            send_message("WARNING: Playing alone won't let you pass the\
+                         storyteller's phase. Please get a friend or add a dummy",
+                         update, context)
+
     dixit_game.start_game(user) # can no longer log the chosen cards!
     send_message(f"The game has begun!", update, context)
     storytellers_turn(update, context)
@@ -187,6 +152,80 @@ def storytellers_turn(update, context):
     send_message(f'{dixit_game.storyteller} is the storyteller!\n'
                  'Please write a clue and click on a card.', update, context,
                  button='Click to see your cards!')
+    if dixit_game.storyteller.id < 0: # If it's a dummy
+        msg = random_card_from_hand(dixit_game.storyteller) + "\nBeep Boop"
+        simulate_message(dixit_game.storyteller.user, msg, update, context)
+
+
+def query_callback(update, context):
+    dixit_game = context.chat_data['dixit_game']
+    query = update.callback_query
+
+    if update.callback_query.from_user.id != dixit_game.master.id:
+        return
+
+    if query.data.startswith('end settings'):
+        _, data = query.data.split(':')
+        markup = None
+        if data == 'LAST_CARD':
+            text = 'Playing by the book, commendable!'
+        elif data == 'POINTS':
+            text = "Would you like to end the game whenever someone first "\
+                   "reaches how many points?"
+            markup = InlineKeyboardMarkup.from_row(
+                     [InlineKeyboardButton(n, callback_data=f'end number:{n}')
+                     for n in (3, 10, 25, 50, 100)]
+                     )
+        elif data == 'ROUNDS':
+            text = "How many rounds would you like the game to last?"
+            markup = InlineKeyboardMarkup.from_row(
+                     [InlineKeyboardButton(n, callback_data=f'end number:{n}')
+                     for n in (1, 3, 5, 10, 25)]
+                     )
+        elif data == 'ENDLESS':
+            text = 'And endless game, nice!'
+
+        else:
+            raise ValueError(f'Invalid query!\n{query}')
+
+
+        query.answer(text='Settings saved!')
+        if data in [c.name for c in dixit_game.end_criteria]:
+            dixit_game.end_criterion = dixit_game.end_criteria[data]
+
+        query.edit_message_text(text=text, reply_markup=markup)
+
+    if query.data.startswith('end number'):
+        # if the user is sending us endgame values
+        _, data = query.data.split(':')
+        number = int(data)
+        dixit_game.end_criterion_number = number
+        text = f'Alright! The game will last until the number of '\
+               f'{dixit_game.end_criterion.name.lower()} is {number}!'
+        query.edit_message_text(text=text)
+
+    if query.data.startswith('dummies settings'):
+        _, data = query.data.split(':')
+        dummies_n = int(data)
+        for n in range(1, dummies_n+1):
+            dummy_user = User(id=f'{-n}', # Negative id
+                               is_bot='False', # Hehe
+                               first_name=f'Dummie {n}',
+                               )
+            dixit_game.add_player(dummy_user)
+        context.chat_data['added_dummies'] = True
+        query.edit_message_text(text=f'{dummies_n} dummies added to the game!\n'
+                                      'Please click on /startgame again')
+
+    if query.data.startswith('play again'):
+        _, data = query.data.split(':')
+        if data == 'True':
+            query.edit_message_text(text='A new game of Dixit begins!')
+            dixit_game.restart_game()
+            storytellers_turn(update, context)
+        else:
+            context.chat_data.pop('dixit_game') # frees game data
+            del dixit_game
 
 
 def inline_callback(update, context):
@@ -251,6 +290,14 @@ def parse_cards(update, context):
                      button='Click to see your cards!',
                      parse_mode='Markdown')
 
+        # The dummies among the other players choose random cards from hand
+        other_dummy_players = (player for player in dixit_game.players
+                                if player.id < 0 and 
+                                player != dixit_game.storyteller)
+        for dummy in other_dummy_players:
+            msg = random_card_from_hand(dummy)
+            simulate_message(dummy.user, msg, update, context)
+
     elif dixit_game.stage == 2:
         dixit_game.player_turns(player=player, card=card_sent)
 
@@ -263,6 +310,16 @@ def parse_cards(update, context):
                          button='Click to see the table!',
                          parse_mode='Markdown')
 
+            # The dummies among the other players choose random cards from table
+            other_dummy_players = (player for player in dixit_game.players
+                                    if player.id < 0 and 
+                                    player != dixit_game.storyteller)
+            for dummy in other_dummy_players:
+                others_cards = [card for player, card in dixit_game.table.items()
+                                if player != dummy]
+                msg = random_card_msg(dummy, others_cards)
+                simulate_message(dummy.user, msg, update, context)
+
     elif dixit_game.stage == 3:
         dixit_game.voting_turns(player=player, card=card_sent)
 
@@ -270,6 +327,13 @@ def parse_cards(update, context):
                      f"{len(dixit_game.players) - 1}) votes")
         if dixit_game.stage == 0:
             end_of_round(update, context)
+
+def simulate_message(user, msg, update, context):
+    '''Simulates the sending of a message through the calling of parse_cards'''
+    update.message.from_user = user
+    update.message.text = msg
+    logging.info(f'{user} is simulating msg {msg}')
+    parse_cards(update, context) 
 
 def show_results_text(results, update, context):
     '''Sends the image of the correct answer and send a message with

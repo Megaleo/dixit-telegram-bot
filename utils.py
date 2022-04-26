@@ -6,6 +6,7 @@ from functools import wraps
 from exceptions import *
 from enum import IntEnum
 from PIL import Image
+from random import choice
 import logging
 import os
 
@@ -105,6 +106,14 @@ def menu_card(card, player, text=None, clue=None):
             input_message_content = InputTextMessageContent(text)
             )
 
+def random_card_msg(player, card_list):
+    '''Returns message with a random chosen card from card_list'''
+    card_id = choice(card_list).id
+    user_id = player.id
+    return f"{user_id}:{card_id}"
+
+def random_card_from_hand(player):
+    return random_card_msg(player, player.hand)
 
 def handle_exceptions(*exceptions):
     '''Decorator that catches the listed exception and forwards their text
