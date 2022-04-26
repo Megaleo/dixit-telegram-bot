@@ -444,7 +444,3 @@ if __name__ == '__main__':
             logging.error(f'Broken token {token}:')
             logging.error(e)
             sys.exit(2)
-
-    while True:
-        command = input('telegram-bot $ ')
-        exec(command)
