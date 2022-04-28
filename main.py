@@ -126,7 +126,7 @@ def start_game_callback(update, context):
     dixit_game = get_game(context)
     added_dummies = context.chat_data.get('added_dummies', False)
     user = update.message.from_user
-    if len(dixit_game.players) < 3: 
+    if len(dixit_game.players) < 3:
         if not added_dummies:
             send_message("There are fewer than 3 players in the game.\n"
                          "How much dummies do you want to add?", update, context,
@@ -136,9 +136,9 @@ def start_game_callback(update, context):
                               for n in range(5)
                              ])
                         )
-            return        
+            return
         elif len(dixit_game.players) == 2:
-            send_message("Playing with two players is not fun... but ok :)", 
+            send_message("Playing with two players is not fun... but ok :)",
                          update, context)
         elif len(dixit_game.players) == 1:
             send_message("WARNING: Playing alone won't let you pass the\

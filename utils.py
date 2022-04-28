@@ -83,7 +83,6 @@ def get_chat_id(context):
     return chat_id
 
 
-
 def ensure_game(exists=True):
     '''Decorator to ensure a game exists before callbacks are made.
     Ensures the opposite if `exists= False`
@@ -130,13 +129,16 @@ def menu_card(card, player, text=None, clue=None):
             input_message_content = InputTextMessageContent('🎴')
             )
 
+
 def random_card_id(player, card_list):
     '''Returns message with a random chosen card from card_list'''
     card_id = choice(card_list).id
     return card_id
 
+
 def random_card_from_hand(player):
     return random_card_id(player, player.hand)
+
 
 def handle_exceptions(*exceptions):
     '''Decorator that catches the listed exception and forwards their text
@@ -163,6 +165,7 @@ def handle_exceptions(*exceptions):
         return msg_f
     return decorator
 
+
 def convert_jpg_to_png(filename_jpg, delete_jpg=False):
     if not filename_jpg.endswith('.jpg'):
         raise ValueError(f'{filename_jpg} does not end with .jpg')
@@ -173,12 +176,14 @@ def convert_jpg_to_png(filename_jpg, delete_jpg=False):
         os.remove(filename_jpg)
     return filename_png
 
+
 class TelegramPhotoSize(IntEnum):
     # The sizes are from my experience. Don't trust this
     SMALL = 0 # 160x160
     MEDIUM = 1 # 320x320
     LARGE = 2 # 640x640
     XLARGE = 3 # > 640x640
+
 
 def get_profile_pic(bot, user_id, size):
     '''Gets first profile pic of user of the chosen size and saves it in tmp/
@@ -209,7 +214,7 @@ def get_profile_pic(bot, user_id, size):
         logging.warning(f'Could not get profile photo of user with id {user_id}.'
                         f'TelegramError raised with message: {str(e)}')
         return False
-    
+
     if not os.path.isdir('tmp'):
         os.makedirs('tmp')
 
