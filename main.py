@@ -158,8 +158,7 @@ def storytellers_turn(update, context):
                  'Please write a clue and click on a card.', update, context,
                  button='Click to see your cards!')
     if dixit_game.storyteller.id < 0: # If it's a dummy
-        msg = random_card_from_hand(dixit_game.storyteller)
-        user_id, card_id = map(int, msg.split(':'))
+        card_id = random_card_from_hand(dixit_game.storyteller)
         simulate_inline(dixit_game.storyteller.user, card_id, 'Beep Boop',
                         update, context)
 
@@ -297,8 +296,7 @@ def inline_choices(update, context):
                                 if player.id < 0 and
                                 player != dixit_game.storyteller)
         for dummy in other_dummy_players:
-            msg = random_card_from_hand(dummy)
-            user_id, card_id = map(int, msg.split(':'))
+            card_id = random_card_from_hand(dummy)
             simulate_inline(dummy.user, card_id, '', update, context)
 
     elif dixit_game.stage == 2:
@@ -320,8 +318,7 @@ def inline_choices(update, context):
             for dummy in other_dummy_players:
                 others_cards = [card for player, card in dixit_game.table.items()
                                 if player != dummy]
-                msg = random_card_msg(dummy, others_cards)
-                user_id, card_id = map(int, msg.split(':'))
+                card_id = random_card_id(dummy, others_cards)
                 simulate_inline(dummy.user, card_id, '', update, context)
 
     elif dixit_game.stage == 3:
