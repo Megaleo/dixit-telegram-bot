@@ -1,6 +1,7 @@
 from telegram import User, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (Updater, CommandHandler, InlineQueryHandler,
-                          MessageHandler, Filters, CallbackQueryHandler)
+                          MessageHandler, Filters, CallbackQueryHandler,
+                          ChosenInlineResultHandler)
 from telegram.error import Unauthorized, InvalidToken
 import logging
 import sys
@@ -67,6 +68,8 @@ ACESSORIES ---------------------------------------------------------------------
 def new_game_callback(update, context):
     '''Runs when /newgame is called. Creates an empty game and adds the master'''
     user = update.message.from_user
+    set_game(context)
+
     get_profile_pic(context.bot, user.id, size=TelegramPhotoSize.SMALL)
 
     logging.info("NEW GAME")
@@ -100,7 +103,9 @@ def new_game_callback(update, context):
 @handle_exceptions(TooManyPlayersError, UserAlreadyInGameError)
 def join_game_callback(update, context):
     '''Runs when /joingame is called. Adds the user to the game'''
-    dixit_game = context.chat_data['dixit_game']
+    set_game(context)
+    dixit_game = get_game(context)
+
     user = update.message.from_user
     get_profile_pic(context.bot, user.id, size=TelegramPhotoSize.SMALL)
     logging.info(f'{user.first_name=}, {user.id=} joined the game')
@@ -118,7 +123,7 @@ def join_game_callback(update, context):
 @handle_exceptions(HandError, UserIsNotMasterError, GameAlreadyStartedError)
 def start_game_callback(update, context):
     '''Runs when /startgame is called. Does final preparations for the game'''
-    dixit_game = context.chat_data['dixit_game']
+    dixit_game = get_game(context)
     added_dummies = context.chat_data.get('added_dummies', False)
     user = update.message.from_user
     if len(dixit_game.players) < 3: 
@@ -147,18 +152,20 @@ def start_game_callback(update, context):
 
 def storytellers_turn(update, context):
     '''Instructs the storyteller to choose a clue and a card'''
-    dixit_game = context.chat_data['dixit_game']
+    dixit_game = get_game(context)
     logging.info("We're now at stage 1: Storyteller's turn!")
     send_message(f'{dixit_game.storyteller} is the storyteller!\n'
                  'Please write a clue and click on a card.', update, context,
                  button='Click to see your cards!')
     if dixit_game.storyteller.id < 0: # If it's a dummy
-        msg = random_card_from_hand(dixit_game.storyteller) + "\nBeep Boop"
-        simulate_message(dixit_game.storyteller.user, msg, update, context)
+        msg = random_card_from_hand(dixit_game.storyteller)
+        user_id, card_id = map(int, msg.split(':'))
+        simulate_inline(dixit_game.storyteller.user, card_id, 'Beep Boop',
+                        update, context)
 
 
 def query_callback(update, context):
-    dixit_game = context.chat_data['dixit_game']
+    dixit_game = get_game(context)
     query = update.callback_query
 
     if update.callback_query.from_user.id != dixit_game.master.id:
@@ -231,12 +238,7 @@ def query_callback(update, context):
 def inline_callback(update, context):
     '''Decides what cards to show when a player makes an inline query'''
     user = update.inline_query.from_user
-    user_games = find_user_games(context, user).values()
-
-    if len(user_games) != 1:
-        return
-
-    [dixit_game] = user_games
+    dixit_game = get_game(context)
 
     [player] = [p for p in dixit_game.players if p.user == user]
     storyteller = dixit_game.storyteller
@@ -264,23 +266,23 @@ def inline_callback(update, context):
 
 @handle_exceptions(UserNotPlayingError, CardDoesntExistError, ClueNotGivenError,
                    PlayerNotStorytellerError, CardHasNoSenderError, VotingError)
-def parse_cards(update, context):
-    '''Parses the user messages and retrieves the player and the played card'''
-    dixit_game = context.chat_data['dixit_game']
-    user = update.message.from_user
-    text = update.message.text
+def inline_choices(update, context):
+    '''Processes the cards users choose on inline queries'''
+    result = update['chosen_inline_result']
+    user = result.from_user
+    dixit_game = get_game(context)
 
-    data, *clue = text.split('\n', maxsplit=1)
-    [clue] = clue or [''] # unpack clue, or make it '' if empty
-    user_id, card_id = map(int, data.split(':')) # data = "user_id:card_id"
+    card_id = int(result.result_id)
+    user_id = user['id']
 
-    logging.info(f'Parsing {user_id=}, {card_id=}, {user.first_name=}, '
-                 f'{user.id=}')
+    card = dixit_game.get_card_by_id(card_id)
     player = dixit_game.get_player_by_id(user_id)
-    card_sent = dixit_game.get_card_by_id(card_id)
+    clue = result.query
+
+    logging.info(f'{user["first_name"]} chose inline {card_id} with query {clue}')
 
     if dixit_game.stage == 1:
-        dixit_game.storyteller_turn(player=player, card=card_sent, clue=clue)
+        dixit_game.storyteller_turn(player=player, card=card, clue=clue)
 
         logging.info(f'{clue=}')
         logging.info("We're now at stage 2: others' turn!")
@@ -292,14 +294,15 @@ def parse_cards(update, context):
 
         # The dummies among the other players choose random cards from hand
         other_dummy_players = (player for player in dixit_game.players
-                                if player.id < 0 and 
+                                if player.id < 0 and
                                 player != dixit_game.storyteller)
         for dummy in other_dummy_players:
             msg = random_card_from_hand(dummy)
-            simulate_message(dummy.user, msg, update, context)
+            user_id, card_id = map(int, msg.split(':'))
+            simulate_inline(dummy.user, card_id, '', update, context)
 
     elif dixit_game.stage == 2:
-        dixit_game.player_turns(player=player, card=card_sent)
+        dixit_game.player_turns(player=player, card=card)
 
         logging.info(f"There are ({len(dixit_game.table)}/"
                      f"{len(dixit_game.players)}) cards on the table!")
@@ -312,28 +315,32 @@ def parse_cards(update, context):
 
             # The dummies among the other players choose random cards from table
             other_dummy_players = (player for player in dixit_game.players
-                                    if player.id < 0 and 
+                                    if player.id < 0 and
                                     player != dixit_game.storyteller)
             for dummy in other_dummy_players:
                 others_cards = [card for player, card in dixit_game.table.items()
                                 if player != dummy]
                 msg = random_card_msg(dummy, others_cards)
-                simulate_message(dummy.user, msg, update, context)
+                user_id, card_id = map(int, msg.split(':'))
+                simulate_inline(dummy.user, card_id, '', update, context)
 
     elif dixit_game.stage == 3:
-        dixit_game.voting_turns(player=player, card=card_sent)
+        dixit_game.voting_turns(player=player, card=card)
 
         logging.info(f"I've received ({len(dixit_game.votes)}/"
                      f"{len(dixit_game.players) - 1}) votes")
         if dixit_game.stage == 0:
             end_of_round(update, context)
 
-def simulate_message(user, msg, update, context):
-    '''Simulates the sending of a message through the calling of parse_cards'''
-    update.message.from_user = user
-    update.message.text = msg
-    logging.info(f'{user} is simulating msg {msg}')
-    parse_cards(update, context) 
+
+def simulate_inline(user, result_id, query, update, context):
+    '''Simulates the choice of an inline option by calling inline_choices'''
+    fake_result = type('Result', (object,), {'from_user': user,
+                       'result_id': result_id, 'query': query})
+    update.chosen_inline_result = fake_result
+    logging.info(f'{user} is simulating inline {result_id=}, {query=}')
+    inline_choices(update, context)
+
 
 def show_results_text(results, update, context):
     '''Sends the image of the correct answer and send a message with
@@ -363,17 +370,20 @@ def show_results_text(results, update, context):
     send_message(results_text, update, context)
     send_message(votes_text, update, context)
 
+
 def show_results_pic(results, update, context):
     '''Sends results pic'''
-    results_fn = save_results_pic(results, n=len(context.chat_data['results']))
+    dixit_game = get_game(context)
+    n = f'{dixit_game.game_number}.{dixit_game.round_number}'
+    results_fn = save_results_pic(results, n=n)
     results_file = open(results_fn, 'rb')
     send_photo(results_file, update, context)
 
+
 def end_of_round(update, context):
     '''Counts points, resets the appropriate variables for the next round'''
-    dixit_game = context.chat_data['dixit_game']
+    dixit_game = get_game(context)
     results = dixit_game.get_results()
-    context.chat_data['results'].append(results)
     show_results_pic(results, update, context)
 
     if dixit_game.has_ended():
@@ -410,14 +420,11 @@ def run_bot(token):
     inline_handler = InlineQueryHandler(inline_callback)
     dispatcher.add_handler(inline_handler)
 
-    # Add messages handler, to parse the card ids sent by the player
-    pattern = r'^\d+:\d+(?:\n.*)?$'
-    message_handler = MessageHandler(Filters.regex(pattern), parse_cards)
-    # I don't know why, but Filter.via_bot() isn't letting it pass...
-    dispatcher.add_handler(message_handler)
-
     # Add CallbackQueryHandler for the mid-chat buttons
     dispatcher.add_handler(CallbackQueryHandler(query_callback))
+
+    # Add ChosenInlineResultHandler, to get the user choices made inline
+    dispatcher.add_handler(ChosenInlineResultHandler(inline_choices))
 
     # Start the bot
     updater.start_polling()
