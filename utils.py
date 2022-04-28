@@ -21,21 +21,20 @@ def send_message(text, update, context, button=None, **kwargs):
                      switch_inline_query_current_chat='')]]
         markup = InlineKeyboardMarkup(keyboard)
 
-    context.bot.send_message(chat_id=update.effective_chat.id, text=text,
-                             reply_markup=markup, **kwargs)
-    logging.debug(f'Sent message "{text}" to chat {update.effective_chat.id=}')
+    chat_id = get_chat_id(context)
+    context.bot.send_message(chat_id=chat_id, text=text, reply_markup=markup,
+                             **kwargs)
+    logging.debug(f'Sent message "{text}" to chat {chat_id=}')
 
 
 def send_photo(photo, update, context, **kwargs):
     '''Sends photo to group chat specified in update and logs it.'''
-    context.bot.send_photo(chat_id=update.effective_chat.id, photo=photo,
-                           **kwargs)
+    chat_id = get_chat_id(context)
+    context.bot.send_photo(chat_id=chat_id, photo=photo, **kwargs)
     if isinstance(photo, str):
-        logging.debug(f'Sent photo "{photo}" to chat '
-                      '{update.effective_chat.id=}')
+        logging.debug(f'Sent photo "{photo}" to chat {chat_id=}')
     else:
-        logging.debug(f'Sent photo to chat '
-                      '{update.effective_chat.id=}')
+        logging.debug(f'Sent photo to chat {chat_id=}')
 
 
 def get_active_games(context):
@@ -58,6 +57,30 @@ def find_user_games(context, user):
     return {chat_id: dixit_game
             for chat_id, dixit_game in get_active_games(context).items()
             if user in dixit_game.users}
+
+
+def get_game(context):
+    """Retrieves the current game from user_data"""
+    chat_id = get_chat_id(context)
+    data = context.dispatcher.chat_data[chat_id]
+    return data['dixit_game']
+
+
+def set_game(context):
+    """Stores current game's ID in `user_data` and sets it as 'current game'.
+    Returns the game object.
+    """
+    chat_id = get_chat_id(context)
+    context.user_data.setdefault('games', []).append(chat_id)
+    context.user_data['current game'] = chat_id
+
+
+def get_chat_id(context):
+    try:
+        chat_id = context.user_data['current game']
+    except KeyError:
+        chat_id, _ = context._chat_id_and_data
+    return chat_id
 
 
 def ensure_game(exists=True):
@@ -99,21 +122,23 @@ def menu_card(card, player, text=None, clue=None):
     '''Returns the specified card as an InlineQueryResultPhoto menu item'''
     text = text or f'{player.id}:{card.id}' + f'\n{clue}'*(clue is not None)
     return InlineQueryResultPhoto(
-            id = str(uuid4()),
+            id = card.id, # str(uuid4()) + ':' + str(card.id),
             photo_url = card.url,
             thumb_url = card.url,
             title = f"Card {card.id} in {player}'s hand",
-            input_message_content = InputTextMessageContent(text)
+            input_message_content = InputTextMessageContent('🎴')
             )
 
-def random_card_msg(player, card_list):
+
+def random_card_id(player, card_list):
     '''Returns message with a random chosen card from card_list'''
     card_id = choice(card_list).id
-    user_id = player.id
-    return f"{user_id}:{card_id}"
+    return card_id
+
 
 def random_card_from_hand(player):
-    return random_card_msg(player, player.hand)
+    return random_card_id(player, player.hand)
+
 
 def handle_exceptions(*exceptions):
     '''Decorator that catches the listed exception and forwards their text
@@ -121,8 +146,8 @@ def handle_exceptions(*exceptions):
     '''
     def decorator(f):
         def msg_f(update, context, *args, **kwargs):
-            user = update.message.from_user
-            dixit_game = context.chat_data.get('dixit_game', None)
+            user = update.effective_user
+            dixit_game = get_game(context)
             try:
                 player = dixit_game.get_player_by_id(user.id)
             except (AttributeError, UserNotPlayingError):
@@ -140,6 +165,7 @@ def handle_exceptions(*exceptions):
         return msg_f
     return decorator
 
+
 def convert_jpg_to_png(filename_jpg, delete_jpg=False):
     if not filename_jpg.endswith('.jpg'):
         raise ValueError(f'{filename_jpg} does not end with .jpg')
@@ -150,12 +176,14 @@ def convert_jpg_to_png(filename_jpg, delete_jpg=False):
         os.remove(filename_jpg)
     return filename_png
 
+
 class TelegramPhotoSize(IntEnum):
     # The sizes are from my experience. Don't trust this
     SMALL = 0 # 160x160
     MEDIUM = 1 # 320x320
     LARGE = 2 # 640x640
     XLARGE = 3 # > 640x640
+
 
 def get_profile_pic(bot, user_id, size):
     '''Gets first profile pic of user of the chosen size and saves it in tmp/
@@ -186,7 +214,7 @@ def get_profile_pic(bot, user_id, size):
         logging.warning(f'Could not get profile photo of user with id {user_id}.'
                         f'TelegramError raised with message: {str(e)}')
         return False
-    
+
     if not os.path.isdir('tmp'):
         os.makedirs('tmp')
 
