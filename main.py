@@ -115,7 +115,7 @@ def join_game_callback(update, context):
         text = f"{user.first_name} was added to the game!"
     else:
         text = f"Welcome {user.first_name}! You may start playing when a new "\
-                "rounds begins"
+                "round begins"
     send_message(text, update, context)
 
 
@@ -129,7 +129,7 @@ def start_game_callback(update, context):
     if len(dixit_game.players) < 3:
         if not added_dummies:
             send_message("There are fewer than 3 players in the game.\n"
-                         "How much dummies do you want to add?", update, context,
+                         "How many dummy players do you want to add?", update, context,
                          reply_markup = InlineKeyboardMarkup.from_row(
                              [InlineKeyboardButton(text=str(n),
                                  callback_data=f'dummies settings:{n}')
@@ -216,7 +216,7 @@ def query_callback(update, context):
         for n in range(1, dummies_n+1):
             dummy_user = User(id=f'{-n}', # Negative id
                                is_bot='False', # Hehe
-                               first_name=f'Dummie {n}',
+                               first_name=f'Dummy {n}',
                                )
             dixit_game.add_player(dummy_user)
         context.chat_data['added_dummies'] = True
