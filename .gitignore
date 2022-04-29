@@ -5,6 +5,11 @@
 token.txt
 tmp/
 *.ipynb
+assets/cards/
+
+# From vim
+*.swp
+tags
 
 ##############
 ### Python ###
