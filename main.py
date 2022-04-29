@@ -8,7 +8,7 @@ import sys
 from game import DixitGame
 from utils import *
 from draw import save_results_pic
-from random import choice
+from random import seed, shuffle, choice
 
 '''
 TODO
@@ -247,7 +247,13 @@ def inline_callback(update, context):
     elif stage == 2 and player != storyteller:
         cards = player.hand
     elif stage == 3 and player != storyteller:
-        cards = table.values()
+        seed(dixit_game.game_id.int + \
+             dixit_game.game_number + \
+             dixit_game.round_number)
+        cards = list(table.values())
+        shuffle(cards)
+        seed()
+
     else:
         cards = table.values() if stage==3 else player.hand
         text = f'{player} is impatient...'

@@ -60,24 +60,24 @@ def find_user_games(context, user):
 
 
 def get_game(context):
-    """Retrieves the current game from user_data"""
+    """Retrieves the current chat from user_data"""
     chat_id = get_chat_id(context)
     data = context.dispatcher.chat_data[chat_id]
     return data['dixit_game']
 
 
 def set_game(context):
-    """Stores current game's ID in `user_data` and sets it as 'current game'.
+    """Stores current chat ID in `user_data` and sets it as 'current chat'.
     Returns the game object.
     """
     chat_id = get_chat_id(context)
     context.user_data.setdefault('games', []).append(chat_id)
-    context.user_data['current game'] = chat_id
+    context.user_data['current chat'] = chat_id
 
 
 def get_chat_id(context):
     try:
-        chat_id = context.user_data['current game']
+        chat_id = context.user_data['current chat']
     except KeyError:
         chat_id, _ = context._chat_id_and_data
     return chat_id

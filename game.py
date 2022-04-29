@@ -22,6 +22,7 @@ from random import shuffle, choice
 from enum import Enum, IntEnum
 from exceptions import *
 from dataclasses import dataclass
+from uuid import uuid4, UUID
 import copy
 
 '''
@@ -117,6 +118,9 @@ class DixitResults:
     - What was the clue;
     - Total points after the round and new points compared to the previous.
     '''
+    game_id: UUID
+    game_number: int
+    round_number: int
     players: List[Player]
     storyteller: Player
     votes: Mapping[Player, Player]
@@ -139,6 +143,7 @@ class DixitGame:
                  votes: Mapping[Player, Player] = None, # Players' voted storytll
                  end_criterion = EndCriterion.LAST_CARD,
                  end_criterion_number = None,
+                 game_id = None
                  ):
         self._stage = stage
         self.players = players or []
@@ -157,6 +162,7 @@ class DixitGame:
         self.lobby = []
         self.round_number = 1
         self.game_number = 1
+        self.game_id = game_id or uuid4()
 
         if cards is None:
             game_ids = list(range(1, 101))
@@ -314,7 +320,10 @@ class DixitGame:
 
     def get_results(self) -> DixitResults:
         '''Returns (a deepcopy of) the results in an instance of DixitResults'''
-        results = DixitResults(players=self.players,
+        results = DixitResults(game_id=self.game_id,
+                               game_number=self.game_number,
+                               round_number=self.round_number,
+                               players=self.players,
                                storyteller=self.storyteller,
                                votes=self.votes,
                                table=self.table,
