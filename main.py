@@ -168,49 +168,54 @@ def query_callback(update, context):
     if update.callback_query.from_user.id != dixit_game.master.id:
         return
 
-    if query.data.startswith('end settings'):
-        _, data = query.data.split(':')
-        markup = None
-        if data == 'LAST_CARD':
+    logging.info(f'Query - {query.data!r}')
+
+    setting, value = query.data.split(':')
+    if setting == 'play again':
+        if value == 'True':
+            query.edit_message_text(text='A new game of Dixit begins!')
+            dixit_game.restart_game()
+            storytellers_turn(update, context)
+        else:
+            context.chat_data.pop('dixit_game') # frees game data
+            del dixit_game
+        return # return early to avoid the last lines of query_callback
+
+    markup = None
+    if setting == 'end settings':
+        if value == 'LAST_CARD':
             text = 'Playing by the book, commendable!'
-        elif data == 'POINTS':
+        elif value == 'POINTS':
             text = "Would you like to end the game whenever someone first "\
                    "reaches how many points?"
             markup = InlineKeyboardMarkup.from_row(
-                     [InlineKeyboardButton(n, callback_data=f'end number:{n}')
+                     [InlineKeyboardButton(n, callback_data=f'end value:{n}')
                      for n in (3, 10, 25, 50, 100)]
                      )
-        elif data == 'ROUNDS':
+        elif value == 'ROUNDS':
             text = "How many rounds would you like the game to last?"
             markup = InlineKeyboardMarkup.from_row(
-                     [InlineKeyboardButton(n, callback_data=f'end number:{n}')
+                     [InlineKeyboardButton(n, callback_data=f'end value:{n}')
                      for n in (1, 3, 5, 10, 25)]
                      )
-        elif data == 'ENDLESS':
+        elif value == 'ENDLESS':
             text = 'And endless game, nice!'
 
         else:
             raise ValueError(f'Invalid query!\n{query}')
 
+        if value in [c.name for c in dixit_game.end_criteria]:
+            dixit_game.end_criterion = dixit_game.end_criteria[value]
 
-        query.answer(text='Settings saved!')
-        if data in [c.name for c in dixit_game.end_criteria]:
-            dixit_game.end_criterion = dixit_game.end_criteria[data]
-
-        query.edit_message_text(text=text, reply_markup=markup)
-
-    if query.data.startswith('end number'):
+    if setting == 'end value':
         # if the user is sending us endgame values
-        _, data = query.data.split(':')
-        number = int(data)
+        number = int(value)
         dixit_game.end_criterion_number = number
         text = f'Alright! The game will last until the number of '\
                f'{dixit_game.end_criterion.name.lower()} is {number}!'
-        query.edit_message_text(text=text)
 
-    if query.data.startswith('dummy settings'):
-        _, data = query.data.split(':')
-        dummies_n = int(data)
+    if setting == 'dummy settings':
+        dummies_n = int(value)
         for n in range(1, dummies_n+1):
             dummy_user = User(id=f'{-n}', # Negative id
                                is_bot='False', # Hehe
@@ -218,21 +223,12 @@ def query_callback(update, context):
                                )
             dixit_game.add_player(dummy_user)
         context.chat_data['added_dummies'] = True
-        query.edit_message_text(text=f'{dummies_n} dummies added to the game!\n'
-                                      'Please click on /startgame again')
+        text=f'{dummies_n} dummies added to the game!\n'\
+              'Please click on /startgame again'
 
-    if query.data.startswith('play again'):
-        _, data = query.data.split(':')
-        if data == 'True':
-            query.edit_message_text(text='A new game of Dixit begins!')
-            dixit_game.restart_game()
-            storytellers_turn(update, context)
-        else:
-            context.chat_data.pop('dixit_game') # frees game data
-            del dixit_game
+    query.answer(text='Settings saved!')
+    query.edit_message_text(text=text, reply_markup=markup)
 
-    a, b = query.data.split(':')
-    logging.info(f'Query - {query.data!r}')
 
 def inline_callback(update, context):
     '''Decides what cards to show when a player makes an inline query'''
