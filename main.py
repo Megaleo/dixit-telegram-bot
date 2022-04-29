@@ -13,20 +13,12 @@ from random import choice
 '''
 TODO
 
-ESSENTIALS ---------------------------------------------------------------------
-
-[X] Implement criteria to end the game
-[X] Ask master whether to start a new game afterwards
-
-
 NICE-TO-HAVE'S -----------------------------------------------------------------
-
-[ ] HIDE CARD ID. Even if we use blank-character wizardry, we should change the
-    ID of the card between when the storyteller and other players play the card
-    and when the other players choose.
 
 [/] Improve the way results are shown; one of the fun parts of dixit is
     discussing whose answer each person has chosen
+    [X] Present results as an image
+    [ ] Improve image (how?)
 
 [ ] Allow player to join game in the middle of a match
 
@@ -38,7 +30,10 @@ NICE-TO-HAVE'S -----------------------------------------------------------------
 
 [ ] Use improved card images
 
-[x] Prevent players from voting for their own cards
+[ ] Make clue-writing system more self-evident
+    [ ] Improve reminder when the storyteller forgets to write a clue
+    [ ] Let the storyteller send clue after choosing card? (I tend to be against it)
+    [ ] Present instructions when the user writes a "?" inline?
 
 ACESSORIES ---------------------------------------------------------------------
 
@@ -52,14 +47,15 @@ ACESSORIES ---------------------------------------------------------------------
     this same game or in another.
 
 [ ] Debugging
-    [ ] Have dummy players to better debug the game alone. They would not be
-        storytellers, but could just always choose a random card when
-        playing/voting.
-    [ ] Create unit tests
+    [/] Create unit tests
+        [ ] Automate dummy testing
+    [ ] Improve terminal output
 
 [ ] Localization
     [ ] Store display messages in an external file
     [ ] Implement ability to translate to other languages. Test with pt-BR
+
+[ ] Use python 3.10 syntax to improve code
 
 '''
 

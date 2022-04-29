@@ -27,22 +27,6 @@ import copy
 '''
 TODO
 
-[?] Discard pile of cards (?)
-
-[X] Use (Int?)Enums to represent the stages of the game
-
-[X] End game: restart variables, accumulate points, etc.
-
-[X] Move all DixitGame-related operations when a new stage is started currently
-    in main.py to methods of the class itself (DixitGame.voting_turn(),
-    DixitGame.storyteller_turn(), etc.)
-    [X] start_game() (now new_game()) (now removed!)
-    [X] play_game() (now start_game())
-    [X] storytellers_turn()
-    [X] player_turns()
-    [X] voting_turns()
-    [X] point_counter()
-
 [ ] Store game history for future analysis?
 
 [/] Be forgiving to mistakes: allow players to overwrite the cards and choices
