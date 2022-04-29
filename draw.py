@@ -3,8 +3,17 @@ from utils import *
 from telegram import User
 from urllib.request import urlopen
 from PIL import Image
-from cairo import Context, SVGSurface, ImageSurface, Surface, Error, FONT_SLANT_NORMAL, FONT_WEIGHT_NORMAL, FORMAT_ARGB32
+from cairo import Context, SVGSurface, ImageSurface, Surface, Error, FONT_SLANT_NORMAL, FONT_WEIGHT_NORMAL, FORMAT_ARGB32, RadialGradient
 import math
+
+'''
+TODO
+
+[/] Drawing
+    [ ] Change clue's font
+    [ ] Differentiate people without photos (by initials?)
+    [X] Highlight storyteller better
+'''
 
 def draw_card(ctx, card):
     file_jpeg = urlopen(card.url)
@@ -20,9 +29,15 @@ def draw_card(ctx, card):
 
 def draw_profile_pic(ctx,
                      pic_filename,
-                     border_color=-1,
+                     border_color=None,
+                     glow_color=None,
+                     glow_excess=None,
                      default_filename='assets/default_pic.png'):
     '''Draws profile picture in pic_filename. Just clips a circle around the image.
+    If `border_color` is specified, draw a border around the circle of that color.
+    If `glow_color` and `glow_excess` are specified, draw a radial gradiant of
+    that color around the circle with the end radius 1 + glow_excess, in units
+    of the radius of the picture circle.
     If image cannot be found, uses the default_filename'''
     # Assuming pic is a png
     # Ref: https://python-telegram-bot.readthedocs.io/en/stable/telegram.bot.html?highlight=getuserprofile#telegram.Bot.get_user_profile_photos
@@ -31,6 +46,16 @@ def draw_profile_pic(ctx,
         pic_surface = ImageSurface.create_from_png(pic_filename)
     except Error:
         pic_surface = ImageSurface.create_from_png(default_filename)
+
+    if glow_color and glow_excess:
+        rg = RadialGradient(0.5, 0.5, 0.5, 0.5, 0.5, 0.5*(1 + glow_excess))
+        rg.add_color_stop_rgba(0, *glow_color, 1)
+        rg.add_color_stop_rgba(1, *glow_color, 0)
+        ctx.set_source(rg)
+        ctx.arc(0.5, 0.5, 0.5*(1 + glow_excess), 0, math.pi * 2)
+        ctx.fill()
+
+    ctx.save()
 
     ctx.arc(0.5, 0.5, 0.5, 0, 2*math.pi)
     ctx.clip()
@@ -42,11 +67,14 @@ def draw_profile_pic(ctx,
 
     ctx.reset_clip()
 
-    if border_color != -1:
+    ctx.restore()
+
+    if border_color:
         ctx.arc(0.5, 0.5, 0.5, 0, 2*math.pi)
         ctx.set_source_rgba(*border_color)
         ctx.set_line_width(0.05)
         ctx.stroke()
+
 
 def draw_background(ctx,
                     clip_width,
@@ -72,6 +100,7 @@ def draw_background(ctx,
 
 card_hor_border=0.2
 score_height=0.15
+delta_score_height=0.7*score_height
 voted_pic_diam=0.3
 voter_pic_diam=0.2
 card_aspect_ratio=1.5
@@ -80,6 +109,8 @@ clue_height=0.2
 
 player_border_color = (0.1, 0.1, 0.1)
 storyteller_border_color = (0.9, 0.9, 0)
+storyteller_glow_color = (0.9, 0.9, 0)
+storyteller_glow_excess = 0.6
 score_color = (0.0, 0.0, 0.0)
 clue_color = (0.0, 0.0, 0.0)
 delta_score_color = (0.0, 0.6, 0.0)
@@ -119,14 +150,21 @@ def draw_results(ctx, results):
         # Draw star in storyteller
         if player == results.storyteller:
             border_color = storyteller_border_color
+            glow_color = storyteller_glow_color
+            glow_excess = storyteller_glow_excess
         else:
             border_color = player_border_color
+            glow_color = None
+            glow_excess = None
 
         # Draw profile pic above card
         ctx.translate(1/2 - voted_pic_diam/2, 0)
         ctx.scale(voted_pic_diam, voted_pic_diam)
 
-        draw_profile_pic(ctx, f'tmp/pic_{player.id}.png', border_color=border_color) # modify this later
+        draw_profile_pic(ctx, f'tmp/pic_{player.id}.png',
+                         border_color,
+                         glow_color,
+                         glow_excess)
 
         ctx.scale(1/voted_pic_diam, 1/voted_pic_diam)
         ctx.translate(-(1/2 - voted_pic_diam/2), 0)
@@ -145,7 +183,7 @@ def draw_results(ctx, results):
 
         ctx.set_source_rgb(*delta_score_color)
         delta_score_text = f'+{results.delta_score[player]}'
-        ctx.set_font_size(score_height/2)
+        ctx.set_font_size(delta_score_height)
         ctx.show_text(delta_score_text)
 
         ctx.translate(-(1/2 - score_extents.width / 2 - score_extents.x_bearing),
@@ -164,21 +202,20 @@ def draw_results(ctx, results):
         ctx.scale(1, 1/card_aspect_ratio)
         ctx.translate(0, - (score_height + voted_pic_diam))
 
-        # Draw profile pics below card
-        # TODO what to do when there are many players
-        n_voters=0
-        for voter, voted in results.votes.items():
-            if voted == player:
-                ctx.translate(n_voters*(voted_pic_diam),
-                              voted_pic_diam + score_height + card_aspect_ratio)
+        player_voters = [voter for voter, voted in results.votes.items() if voted == player]
+        # Account for when stack of voter pictures would exceed card width
+        voter_translation = min(voter_pic_diam, (1-voter_pic_diam)/(len(player_voters)-1)) \
+                            if len(player_voters) > 1 else voter_pic_diam
+        for voter_n, voter in enumerate(player_voters):
+            ctx.translate(voter_n*(voter_translation),
+                          voted_pic_diam + score_height + card_aspect_ratio)
 
-                ctx.scale(voter_pic_diam, voter_pic_diam)
-                draw_profile_pic(ctx, f'tmp/pic_{voter.id}.png')
-                ctx.scale(1/voter_pic_diam, 1/voter_pic_diam)
+            ctx.scale(voter_pic_diam, voter_pic_diam)
+            draw_profile_pic(ctx, f'tmp/pic_{voter.id}.png')
+            ctx.scale(1/voter_pic_diam, 1/voter_pic_diam)
 
-                ctx.translate(-n_voters*(voter_pic_diam),
-                              -(voted_pic_diam + score_height + card_aspect_ratio))
-                n_voters += 1
+            ctx.translate(-voter_n*(voter_translation),
+                          -(voted_pic_diam + score_height + card_aspect_ratio))
 
         # Translate to next card
         ctx.translate(1 + card_hor_border, 0)
