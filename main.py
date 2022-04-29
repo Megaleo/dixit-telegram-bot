@@ -68,8 +68,9 @@ def new_game_callback(update, context):
 
     get_profile_pic(context.bot, user.id, size=TelegramPhotoSize.SMALL)
 
-    logging.info("NEW GAME")
-    logging.info("We're now at stage 0: Lobby!")
+    chat = update.effective_chat
+    logging.info(f"NEW GAME - name: {chat.title!r}, id: {chat.id}")
+    print(); logging.info("Stage 0: Lobby!")
 
     dixit_game = DixitGame(master=user)
     context.chat_data['dixit_game'] = dixit_game
@@ -125,10 +126,11 @@ def start_game_callback(update, context):
     if len(dixit_game.players) < 3:
         if not added_dummies:
             send_message("There are fewer than 3 players in the game.\n"
-                         "How many dummy players do you want to add?", update, context,
+                         "How many dummy players do you want to add?",
+                         update, context,
                          reply_markup = InlineKeyboardMarkup.from_row(
                              [InlineKeyboardButton(text=str(n),
-                                 callback_data=f'dummies settings:{n}')
+                                 callback_data=f'dummy settings:{n}')
                               for n in range(5)
                              ])
                         )
@@ -149,7 +151,7 @@ def start_game_callback(update, context):
 def storytellers_turn(update, context):
     '''Instructs the storyteller to choose a clue and a card'''
     dixit_game = get_game(context)
-    logging.info("We're now at stage 1: Storyteller's turn!")
+    print(); logging.info("Stage 1: Storyteller's turn!")
     send_message(f'{dixit_game.storyteller} is the storyteller!\n'
                  'Please write a clue and click on a card.', update, context,
                  button='Click to see your cards!')
@@ -206,7 +208,7 @@ def query_callback(update, context):
                f'{dixit_game.end_criterion.name.lower()} is {number}!'
         query.edit_message_text(text=text)
 
-    if query.data.startswith('dummies settings'):
+    if query.data.startswith('dummy settings'):
         _, data = query.data.split(':')
         dummies_n = int(data)
         for n in range(1, dummies_n+1):
@@ -229,6 +231,8 @@ def query_callback(update, context):
             context.chat_data.pop('dixit_game') # frees game data
             del dixit_game
 
+    a, b = query.data.split(':')
+    logging.info(f'Query - {query.data!r}')
 
 def inline_callback(update, context):
     '''Decides what cards to show when a player makes an inline query'''
@@ -239,9 +243,6 @@ def inline_callback(update, context):
     storyteller = dixit_game.storyteller
     table = dixit_game.table
     stage = dixit_game.stage
-
-    logging.info(f'Inline from {player!r}')
-    logging.info(f'Player is {"not " * (player!=storyteller)}the storyteller')
 
     text = clue = None
     if stage == 1 and player == storyteller:
@@ -274,13 +275,14 @@ def inline_choices(update, context):
     player = dixit_game.get_player_by_id(user_id)
     clue = result.query
 
-    logging.info(f'{user["first_name"]} chose inline {card_id} with query {clue}')
+    # logging.info(f'{user["first_name"]} chose inline {card_id} with query {clue}')
+    logging.info(f'Inline - {user["first_name"]}, card_id: {card_id}'
+                 + f', query: {clue}'*bool(clue))
 
     if dixit_game.stage == 1:
         dixit_game.storyteller_turn(player=player, card=card, clue=clue)
 
-        logging.info(f'{clue=}')
-        logging.info("We're now at stage 2: others' turn!")
+        print(); logging.info("Stage 2: Others' turn!")
 
         send_message(f"Now, let the others send their cards!\n"
                      f"Clue: *{dixit_game.clue}*", update, context,
@@ -298,10 +300,10 @@ def inline_choices(update, context):
     elif dixit_game.stage == 2:
         dixit_game.player_turns(player=player, card=card)
 
-        logging.info(f"There are ({len(dixit_game.table)}/"
-                     f"{len(dixit_game.players)}) cards on the table!")
+        logging.info(f"Table - ({len(dixit_game.table)}/"
+                     f"{len(dixit_game.players)}) cards")
         if dixit_game.stage == 3:
-            logging.info("We're now at stage 3: vote!")
+            print(); logging.info("Stage 3: Vote!")
             send_message(f"Hear ye, hear ye! Time to vote!\n"
                          f"Clue: *{dixit_game.clue}*", update, context,
                          button='Click to see the table!',
@@ -320,7 +322,7 @@ def inline_choices(update, context):
     elif dixit_game.stage == 3:
         dixit_game.voting_turns(player=player, card=card)
 
-        logging.info(f"I've received ({len(dixit_game.votes)}/"
+        logging.info(f"Table - ({len(dixit_game.votes)}/"
                      f"{len(dixit_game.players) - 1}) votes")
         if dixit_game.stage == 0:
             end_of_round(update, context)
@@ -331,7 +333,8 @@ def simulate_inline(user, result_id, query, update, context):
     fake_result = type('Result', (object,), {'from_user': user,
                        'result_id': result_id, 'query': query})
     update.chosen_inline_result = fake_result
-    logging.info(f'{user} is simulating inline {result_id=}, {query=}')
+    # logging.info(f'{user} is simulating inline {result_id=}, {query=}')
+    # logging.info(f'Simulate Inline - {user.name}, {result_id=}, {query=}')
     inline_choices(update, context)
 
 
@@ -375,9 +378,23 @@ def show_results_pic(results, update, context):
 
 def end_of_round(update, context):
     '''Counts points, resets the appropriate variables for the next round'''
+    print(); logging.info('Stage 0: Lobby!')
+
     dixit_game = get_game(context)
     results = dixit_game.get_results()
+    log = 'Results -\n'
+    for player in results.players:
+        score = results.score[player]
+        delta = results.delta_score[player]
+        is_st = player==results.storyteller
+        vote = results.votes[player] if not is_st else None
+        log += f'\t{player.name:<20} - {score} (+{delta}), ' \
+              + (f'(voted for {vote})' if not is_st else 'was the Storyteller')\
+              + '\n'
+    logging.info(log.strip())
+
     show_results_pic(results, update, context)
+    logging.info('Results - Sent image')
 
     if dixit_game.has_ended():
         end_game(update, context)
@@ -425,7 +442,8 @@ def run_bot(token):
 
 
 if __name__ == '__main__':
-    logging_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    # logging_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    logging_format = '%(asctime)s - %(levelname)s - %(message)s'
     logging.basicConfig(format=logging_format, level=logging.INFO)
     tokenpath = 'token.txt'
     with open(tokenpath, 'r') as token_file:
