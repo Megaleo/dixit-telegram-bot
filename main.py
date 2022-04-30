@@ -8,7 +8,7 @@ import sys
 from game import DixitGame
 from utils import *
 from draw import save_results_pic
-from random import seed, shuffle, choice
+from random import shuffle, choice
 
 '''
 TODO
@@ -247,13 +247,7 @@ def inline_callback(update, context):
     elif stage == 2 and player != storyteller:
         cards = player.hand
     elif stage == 3 and player != storyteller:
-        seed(dixit_game.game_id.int + \
-             dixit_game.game_number + \
-             dixit_game.round_number)
-        cards = list(table.values())
-        shuffle(cards)
-        seed()
-
+        cards = table.values()
     else:
         cards = table.values() if stage==3 else player.hand
         text = f'{player} is impatient...'
@@ -277,7 +271,6 @@ def inline_choices(update, context):
     player = dixit_game.get_player_by_id(user_id)
     clue = result.query
 
-    # logging.info(f'{user["first_name"]} chose inline {card_id} with query {clue}')
     logging.info(f'Inline - {user["first_name"]}, card_id: {card_id}'
                  + f', query: {clue}'*bool(clue))
 
@@ -335,8 +328,6 @@ def simulate_inline(user, result_id, query, update, context):
     fake_result = type('Result', (object,), {'from_user': user,
                        'result_id': result_id, 'query': query})
     update.chosen_inline_result = fake_result
-    # logging.info(f'{user} is simulating inline {result_id=}, {query=}')
-    # logging.info(f'Simulate Inline - {user.name}, {result_id=}, {query=}')
     inline_choices(update, context)
 
 

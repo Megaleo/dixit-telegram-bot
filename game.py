@@ -18,7 +18,7 @@
 from typing import Optional, List, Mapping, Tuple
 from telegram import User
 from collections import Counter
-from random import shuffle, choice
+from random import shuffle, choice, sample
 from enum import Enum, IntEnum
 from exceptions import *
 from dataclasses import dataclass
@@ -296,6 +296,8 @@ class DixitGame:
         if len(self.table) == len(self.players):
             for player, card in self.table.items():
                 player.hand.remove(card)
+            # shuffling the table (using shuffle() is more complicated)
+            self.table = dict(sample(self.table.items(), k=len(self.table)))
             self.stage = Stage.VOTE
 
     def voting_turns(self, player, card):
@@ -320,16 +322,16 @@ class DixitGame:
 
     def get_results(self) -> DixitResults:
         '''Returns (a deepcopy of) the results in an instance of DixitResults'''
-        results = DixitResults(game_id=self.game_id,
-                               game_number=self.game_number,
-                               round_number=self.round_number,
-                               players=self.players,
-                               storyteller=self.storyteller,
-                               votes=self.votes,
-                               table=self.table,
-                               clue=self.clue,
-                               score=self.score,
-                               delta_score=self.delta_score
+        results = DixitResults(game_id = self.game_id,
+                               game_number = self.game_number,
+                               round_number = self.round_number,
+                               players = self.players,
+                               storyteller = self.storyteller,
+                               votes = self.votes,
+                               table = self.table,
+                               clue = self.clue,
+                               score = self.score,
+                               delta_score = self.delta_score
                                )
         return results
 
