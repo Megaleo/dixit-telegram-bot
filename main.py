@@ -240,14 +240,16 @@ def inline_callback(update, context):
     table = dixit_game.table
     stage = dixit_game.stage
 
-    text = clue = None
+    text = '🎴'
+    clue = None
     if stage == 1 and player == storyteller:
-        clue = update.inline_query.query
         cards = player.hand
+        clue = update.inline_query.query
     elif stage == 2 and player != storyteller:
         cards = player.hand
     elif stage == 3 and player != storyteller:
         cards = table.values()
+        text = '🗳'
     else:
         cards = table.values() if stage==3 else player.hand
         text = f'{player} is impatient...'

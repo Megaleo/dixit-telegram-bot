@@ -118,15 +118,16 @@ def ensure_user_inactive(callback):
     return safe_callback
 
 
-def menu_card(card, player, text=None, clue=None):
+def menu_card(card, player, text='🎴', clue=None):
     '''Returns the specified card as an InlineQueryResultPhoto menu item'''
-    text = text or f'{player.id}:{card.id}' + f'\n{clue}'*(clue is not None)
+    if clue is not None:
+        text += '\n' + clue
     return InlineQueryResultPhoto(
             id = card.id, # str(uuid4()) + ':' + str(card.id),
             photo_url = card.url,
             thumb_url = card.url,
             title = f"Card {card.id} in {player}'s hand",
-            input_message_content = InputTextMessageContent('🎴')
+            input_message_content = InputTextMessageContent(text)
             )
 
 
