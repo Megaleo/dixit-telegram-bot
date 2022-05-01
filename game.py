@@ -391,7 +391,7 @@ class DixitGame:
         shuffle(cards)
         self.cards = cards
         self._draw_pile = self.cards.copy()
-        self.score = dict.fromkeys(self.players, [0, 0])
+        self.score = dict.fromkeys(self.players, 0)
         self.round_number = 1
         self.game_number += 1
         self.discard_pile.clear()
