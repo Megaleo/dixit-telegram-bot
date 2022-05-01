@@ -70,7 +70,7 @@ def new_game_callback(update, context):
 
     chat = update.effective_chat
     logging.info(f"NEW GAME - name: {chat.title!r}, id: {chat.id}")
-    logging.info(f'Master - {user.first_name=}, {user.id=}')
+    logging.info(f'Master - first_name: {user.first_name}, id: {user.id}')
     print(); logging.info("Stage 0: Lobby!")
 
     dixit_game = DixitGame(master=user)
@@ -106,7 +106,7 @@ def join_game_callback(update, context):
 
     user = update.message.from_user
     get_profile_pic(context.bot, user.id, size=TelegramPhotoSize.SMALL)
-    logging.info(f'/join - {user.first_name=}, {user.id=}')
+    logging.info(f'/join - first_name: {user.first_name}, id: {user.id}')
 
     dixit_game.add_player(user)
     if dixit_game.stage==0:
