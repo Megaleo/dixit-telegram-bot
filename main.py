@@ -179,6 +179,7 @@ def query_callback(update, context):
         else:
             context.chat_data.pop('dixit_game') # frees game data
             del dixit_game
+            query.edit_message_text(text='The game has ended.')
         return # return early to avoid the last lines of query_callback
 
     markup = None
