@@ -78,14 +78,14 @@ class Card:
 
 
 class Player:
-    def __init__(self, user: User, hand=None):
+    def __init__(self, user, hand=None, name=None, id=None):
         '''user contains id and name. See
         https://python-telegram-bot.readthedocs.io/en/latest/telegram.user.html#telegram.User
         for more'''
         self.user = user
         self.hand = hand or []
-        self.name = ' '.join(filter(bool, [user.first_name, user.last_name]))
-        self.id = self.user.id
+        self.name = name or ' '.join(filter(bool, [user.first_name, user.last_name]))
+        self.id = id or self.user.id
 
     def __repr__(self):
         return f'Player(name={self.name}, id_={self.id})'
