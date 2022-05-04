@@ -10,6 +10,7 @@ from random import choice
 import logging
 import os
 
+
 def send_message(text, update, context, button=None, **kwargs):
     '''Sends message to group chat specified in update and logs it. If the
     button argument is passed, shows the users a button with the specified

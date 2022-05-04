@@ -57,13 +57,13 @@ class EndCriterion(Enum):
 
 
 class Card:
-    def __init__(self, image_id: int, _id: int):
+    def __init__(self, image_id: int, id: int):
         '''image_id is the id of the card's image in Telegram's cache (or,
         temporarily, on the web)
         _id is used by the bot to know which card each player has chosen,
         and is randomized every game'''
         self.image_id = image_id
-        self.id = _id
+        self.id = id
 
     def __eq__(self, other):
         return (self.image_id, self.id) == (other.image_id, other.id)
@@ -133,35 +133,43 @@ class DixitResults:
 class DixitGame:
     '''The main class. Handles the game logic'''
     def __init__(self,
-                 stage: Stage = Stage.LOBBY,
+                 _stage: Stage = Stage.LOBBY,
                  players: Optional[Player] = None,
                  master: Optional[Player] = None,
-                 storyteller: Optional[Player] = None,
+                 _storyteller: Optional[Player] = None,
                  clue: Optional[str] = None,
                  cards: List[Card] = None,
                  table: Mapping[Player, Card] = None, # Players' played cards
                  votes: Mapping[Player, Player] = None, # Players' voted storytll
-                 end_criterion = EndCriterion.LAST_CARD,
-                 end_criterion_number = None,
+                 end_criterion: EndCriterion = EndCriterion.LAST_CARD,
+                 end_criterion_number: Optional[int] = None,
+                 _draw_pile: List[Card] = None,
+                 cards_per_player: int = 6,
+                 discard_pile: List[Card] = None,
+                 score: Mapping[Player, int] = None,
+                 delta_score: Mapping[Player, int] = None,
+                 lobby: List[Player] = None,
+                 round_number: int = 1,
+                 game_number: int = 1,
                  game_id = None
                  ):
-        self._stage = stage
+        self._stage = _stage
         self.players = players or []
-        self._storyteller = storyteller
         self.master = master
+        self._storyteller = _storyteller
         self.clue = clue
         self.table = table or {}
         self.votes = votes or {}
         self.end_criterion = end_criterion
         self.end_criterion_number = end_criterion_number
-        self._draw_pile = None
-        self.cards_per_player = 6
-        self.discard_pile = []
-        self.score = dict.fromkeys(self.players, 0)
-        self.delta_score = dict.fromkeys(self.players, 0)
-        self.lobby = []
-        self.round_number = 1
-        self.game_number = 1
+        self._draw_pile = _draw_pile 
+        self.cards_per_player = cards_per_player
+        self.discard_pile = discard_pile or []
+        self.score = score or dict.fromkeys(self.players, 0)
+        self.delta_score = score or dict.fromkeys(self.players, 0)
+        self.lobby = lobby or []
+        self.round_number = round_number
+        self.game_number = game_number
         self.game_id = game_id or uuid4()
 
         if cards is None:

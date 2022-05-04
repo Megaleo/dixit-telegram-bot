@@ -4,6 +4,7 @@
 
 token.txt
 tmp/
+data/
 *.ipynb
 assets/cards/
 
