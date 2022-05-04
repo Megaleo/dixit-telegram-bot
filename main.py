@@ -79,7 +79,7 @@ def new_game_callback(update, context):
 
     send_message(f"Let's play Dixit!\n"
                  f"The master {dixit_game.master} has created a new game. \n"
-                 "Click /joingame to join and /startgame to start playing!",
+                 "Click /join to join and /start to start playing!",
                  update, context,)
 
     send_message(f'Would you like the game to end based on what?',
@@ -100,7 +100,7 @@ def new_game_callback(update, context):
 @ensure_user_inactive
 @handle_exceptions(TooManyPlayersError, UserAlreadyInGameError)
 def join_game_callback(update, context):
-    '''Runs when /joingame is called. Adds the user to the game'''
+    '''Runs when /join is called. Adds the user to the game'''
     set_game(context)
     dixit_game = get_game(context)
 
@@ -120,7 +120,7 @@ def join_game_callback(update, context):
 @ensure_game(exists=True)
 @handle_exceptions(HandError, UserIsNotMasterError, GameAlreadyStartedError)
 def start_game_callback(update, context):
-    '''Runs when /startgame is called. Does final preparations for the game'''
+    '''Runs when /start is called. Does final preparations for the game'''
     dixit_game = get_game(context)
     added_dummies = context.chat_data.get('added_dummies', False)
     user = update.message.from_user
@@ -226,7 +226,7 @@ def query_callback(update, context):
             dixit_game.add_player(dummy_user)
         context.chat_data['added_dummies'] = True
         text=f'{dummies_n} dummies added to the game!\n'\
-              'Please click on /startgame again'
+              'Please click on /start again'
 
     query.answer(text='Settings saved!')
     query.edit_message_text(text=text, reply_markup=markup)
@@ -418,8 +418,8 @@ def run_bot(token):
 
     # Add commands handlers
     command_callbacks = {'newgame': new_game_callback,
-                         'joingame': join_game_callback,
-                         'startgame': start_game_callback}
+                         'join': join_game_callback,
+                         'start': start_game_callback}
     for name, callback in command_callbacks.items():
         dispatcher.add_handler(CommandHandler(name, callback))
 
