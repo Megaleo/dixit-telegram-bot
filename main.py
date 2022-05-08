@@ -284,8 +284,8 @@ def inline_choices(update, context):
         print(); logging.info("Stage 2: Others' turn!")
 
         send_message(f"Now, let the others send their cards!\n"
-                     f"Clue: *{dixit_game.clue}*", update, context,
-                     button='Click to see your cards!',
+                     f"{apostrophe(dixit_game.storyteller)} clue: *{dixit_game.clue}*",
+                     update, context, button='Click to see your cards!',
                      parse_mode='Markdown')
 
         # The dummies among the other players choose random cards from hand
@@ -304,8 +304,8 @@ def inline_choices(update, context):
         if dixit_game.stage == 3:
             print(); logging.info("Stage 3: Vote!")
             send_message(f"Hear ye, hear ye! Time to vote!\n"
-                         f"Clue: *{dixit_game.clue}*", update, context,
-                         button='Click to see the table!',
+                         f"{apostrophe(dixit_game.storyteller)} clue: *{dixit_game.clue}*",
+                         update, context, button='Click to see the table!',
                          parse_mode='Markdown')
 
             # The dummies among the other players choose random cards from table
