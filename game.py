@@ -73,8 +73,9 @@ class Card:
 
     @property
     def url(self):
-        return 'https://raw.githubusercontent.com/jminuscula/dixit-online/'\
-               + f'master/cards/card_{self.image_id:0>5}.jpg'
+        # return 'https://raw.githubusercontent.com/jminuscula/dixit-online/'\
+        #        + f'master/cards/card_{self.image_id:0>5}.jpg'
+        return f'https://play-dixit.online/cards/card_{self.image_id}.jpg'
 
 
 class Player:
@@ -165,7 +166,7 @@ class DixitGame:
         self.game_id = game_id or uuid4()
 
         if cards is None:
-            game_ids = list(range(1, 101))
+            game_ids = list(range(1, 373))
             shuffle(game_ids)
             cards = [Card(n, id_) for n, id_ in enumerate(game_ids, start=1)]
             shuffle(cards)
