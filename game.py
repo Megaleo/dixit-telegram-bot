@@ -286,7 +286,12 @@ class DixitGame:
         if player != self.storyteller:
             raise PlayerNotStorytellerError('{player} is not the storyteller!')
         if not clue:
-            raise ClueNotGivenError('You forgot to give us a clue!')
+            raise ClueNotGivenError('You forgot to give us a clue!\n\n'
+                                    ' •  Click the button above to see your '
+                                    'cards\n'
+                                    ' •  Write your clue\n'
+                                    ' •  Choose your card and send it along '
+                                    'with the clue!')
         self.clue = clue
         self.table[self.storyteller] = card
         self.stage = Stage.PLAYERS

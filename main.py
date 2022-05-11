@@ -31,7 +31,7 @@ NICE-TO-HAVE'S -----------------------------------------------------------------
 [ ] Use improved card images
 
 [ ] Make clue-writing system more self-evident
-    [ ] Improve reminder when the storyteller forgets to write a clue
+    [X] Improve reminder when the storyteller forgets to write a clue
     [ ] Let the storyteller send clue after choosing card? (I tend to be against it)
     [ ] Present instructions when the user writes a "?" inline?
 
