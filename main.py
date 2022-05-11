@@ -394,18 +394,26 @@ def end_of_round(update, context):
     logging.info('Results - Sent image')
 
     if dixit_game.has_ended():
-        end_game(update, context)
+        end_game(results, update, context)
 
     else:
         dixit_game.new_round()
         storytellers_turn(update, context)
 
 
-def end_game(update, context):
-    send_message('Shall we play another match?',
-                 update, context,
+def end_game(results, update, context):
+    max_score = max(results.score.values())
+    winners = [p.name for p in results.score if results.score[p]==max_score]
+    if len(winners) == 1:
+        text = f'{winners[0]} has won the game! 🎉'
+    else:
+        text = ', '.join(winners[:-1]) + ' and ' + winners[-1]\
+               + ' have won the game! 🎉'
+    send_message(text, update, context)
+    send_message('Shall we play another match?', update, context,
                  reply_markup = InlineKeyboardMarkup.from_column(
-                     [InlineKeyboardButton(text,
+                     [InlineKeyboardButton(
+                         text,
                          callback_data=f'play again:{text=="Yes"}')
                       for text in ('Yes', 'No')])
                 )
