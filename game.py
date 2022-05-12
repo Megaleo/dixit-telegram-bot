@@ -73,26 +73,24 @@ class Card:
 
     @property
     def url(self):
-        # return 'https://raw.githubusercontent.com/jminuscula/dixit-online/'\
-        #        + f'master/cards/card_{self.image_id:0>5}.jpg'
         return f'https://play-dixit.online/cards/card_{self.image_id}.jpg'
 
 
 class Player:
     def __init__(self, user: User, hand=None):
-        '''user contains id and name. See
-        https://python-telegram-bot.readthedocs.io/en/latest/telegram.user.html#telegram.User
-        for more'''
+        '''Represents a player taking part in the game'''
         self.user = user
         self.hand = hand or []
-        self.name = ' '.join(filter(bool, [user.first_name, user.last_name]))
+        self.first_name = user.first_name
+        self.last_name = user.last_name
+        self.username = user.username
         self.id = self.user.id
 
     def __repr__(self):
-        return f'Player(name={self.name}, id_={self.id})'
+        return f'Player(name={self.name()}, id_={self.id})'
 
     def __str__(self):
-        return self.name
+        return self.name()
 
     def __eq__(self, other):
         # we could change self.user.id to self.id, so as to be able to compare
@@ -103,6 +101,22 @@ class Player:
 
     def __hash__(self):
         return self.id
+
+    def name(self, mode='full', possessive=False):
+        if mode == 'username':
+            return self.name('full', possessive) \
+                + f' ({self.username})'*bool(self.username)
+        elif mode == 'full':
+            monicker = ' '.join(filter(bool, [self.first_name, self.last_name]))
+        elif mode == 'formal':
+            if self.last_name:
+                monicker =  self.first_name[0] + '. ' + self.last_name
+            else:
+                monicker = self.first_name
+        elif mode == 'first': # as self.first_name doesn't have possessives
+            monicker = self.first_name
+        return monicker + ("'" if monicker.endswith('s') else "'s")*possessive
+
 
     def add_card(self, card):
         self.hand.append(card)

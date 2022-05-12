@@ -284,7 +284,7 @@ def inline_choices(update, context):
         print(); logging.info("Stage 2: Others' turn!")
 
         send_message(f"Now, let the others send their cards!\n"
-                     f"{apostrophe(dixit_game.storyteller.name)} clue: *{dixit_game.clue}*",
+                     f"{player.name(possessive=True)} clue: *{dixit_game.clue}*",
                      update, context, button='Click to see your cards!',
                      parse_mode='Markdown')
 
@@ -304,7 +304,8 @@ def inline_choices(update, context):
         if dixit_game.stage == 3:
             print(); logging.info("Stage 3: Vote!")
             send_message(f"Hear ye, hear ye! Time to vote!\n"
-                         f"{apostrophe(dixit_game.storyteller.name)} clue: *{dixit_game.clue}*",
+                         f"{dixit_game.storyteller.name(possessive=True)}"
+                         f" clue: *{dixit_game.clue}*",
                          update, context, button='Click to see the table!',
                          parse_mode='Markdown')
 
@@ -345,7 +346,7 @@ def show_results_text(results, update, context):
     send_message(f'The correct answer was...', update, context)
     send_photo(storyteller_card.url, update, context)
 
-    results_text = '\n'.join([f'{player.name}:  {total_pts} '
+    results_text = '\n'.join([f'{player}:  {total_pts} '
                               + f'(+{delta_pts})'if delta_pts else ''
                               for (player, total_pts), delta_pts
                               in zip(score.items(), delta_score.values())])
@@ -385,7 +386,7 @@ def end_of_round(update, context):
         delta = results.delta_score[player]
         is_st = player==results.storyteller
         vote = results.votes[player] if not is_st else None
-        log += f'\t{player.name:<20} - {score} (+{delta}), ' \
+        log += f'\t{player.name():<20} - {score} (+{delta}), ' \
               + (f'(voted for {vote})' if not is_st else 'was the Storyteller')\
               + '\n'
     logging.info(log.strip())
@@ -403,7 +404,7 @@ def end_of_round(update, context):
 
 def end_game(results, update, context):
     max_score = max(results.score.values())
-    winners = [p.name for p in results.score if results.score[p]==max_score]
+    winners = [p.name() for p in results.score if results.score[p]==max_score]
     if len(winners) == 1:
         text = f'{winners[0]} has won the game! 🎉'
     else:

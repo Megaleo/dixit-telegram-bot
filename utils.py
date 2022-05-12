@@ -223,12 +223,3 @@ def get_profile_pic(bot, user_id, size):
     photo_file.download(custom_path=filename_jpg)
     filename_png = convert_jpg_to_png(filename_jpg, delete_jpg=True)
     return filename_png
-
-
-# Possessive apostrophe rule in english grammar
-def apostrophe(name):
-    first_name = name.split()[0]
-    if first_name[-1] == 's':
-        return f"{first_name}'"
-    else:
-        return f"{first_name}'s"
