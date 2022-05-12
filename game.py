@@ -33,7 +33,7 @@ TODO
 [/] Be forgiving to mistakes: allow players to overwrite the cards and choices
     they made (Cards can be overwritten so long a new stage hasn't been triggered)
 
-[ ] Fix possible bug: in new_round, when checking if there are enough cards for
+[X] Fix possible bug: in new_round, when checking if there are enough cards for
     the next round, it is assumed no more than one card per player will be
     needed. This might not be true if there are newcoming players who'll need a
     whole hand.
@@ -408,10 +408,15 @@ class DixitGame:
         '''Resets variables to start a new round of dixit'''
         self.discard_pile.extend(self.table.values())
         self.housekeeping()
-        if len(self.draw_pile) < len(self.players): # if not enough cards
+
+        n_cards_to_be_added = 0
+        for player in self.players:
+            n_cards_to_be_added += self.cards_per_player - len(player.cards)
+        if len(self.draw_pile) < n_cards_to_be_added: # if not enough cards
             shuffle(self.discard_pile)
             self.draw_pile.extend(self.discard_pile)
             self.discard_pile.clear()
+
         for player in self.players:
             self.refill_hand(player)
         self.round_number += 1
