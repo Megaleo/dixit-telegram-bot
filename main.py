@@ -108,12 +108,16 @@ def join_game_callback(update, context):
     get_profile_pic(context.bot, user.id, size=TelegramPhotoSize.SMALL)
     logging.info(f'/join - first_name: {user.first_name}, id: {user.id}')
 
-    dixit_game.add_player(user)
-    if dixit_game.stage==0:
+    add_code = dixit_game.add_player(user)
+    if add_code == 1:
+        text = f"Welcome {user.first_name}! Current players are voting. "\
+        "You may start playing when a new round begins"
+    elif add_code == 2:
+        text = f"Welcome {user.first_name}! There are not enough cards in the draw pile. "\
+        "You may start playing when a new round begins"
+    elif add_code == 3:
         text = f"{user.first_name} was added to the game!"
-    else:
-        text = f"Welcome {user.first_name}! You may start playing when a new "\
-                "round begins"
+    
     send_message(text, update, context)
 
 

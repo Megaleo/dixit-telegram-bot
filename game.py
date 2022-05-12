@@ -238,22 +238,37 @@ class DixitGame:
             return self.round_number >= self.end_criterion_number
 
     def add_player(self, player):
-        '''Adds player to game. Makes it master if there wasn't one'''
+        '''Adds player to game. Makes it master if there wasn't one.
+        Returns:
+            1 if the player was added to the lobby because of voting stage
+            2 if the player was added to the lobby because of not enough cards
+            3 if the player was added to the players list'''
         player = Player(player) if isinstance(player, User) else player
 
         if player in self.players:
             raise UserAlreadyInGameError("Damn you, {user.first_name}! You have "
                    "already joined the game!")
+
         if len(self.players) >= self.max_players:
            raise TooManyPlayersError("{user.first_name} Can't join the game! "
                    "There are only enough cards to supply "
                    "{dixit_game.max_players} players, unfortunately!")
 
-        if self.stage == Stage.LOBBY:
-            self.players.append(player)
-        else:
-            self.lobby.append(player)
         self.master = self.master or player
+        if self.stage == Stage.VOTE:
+            self.lobby.append(player)
+            return 1
+        elif self.stage == Stage.STORYTELLER or self.stage == Stage.PLAYERS:
+            if len(self.draw_pile) < self.cards_per_player:
+                self.lobby.append(player)
+                return 2
+            else:
+                self.players.append(player)
+                self.refill_hand(player)
+                return 3
+        elif self.stage == Stage.LOBBY:
+            self.players.append(player)
+            return 3
 
     def refill_hand(self, player, strict=False):
         '''Makes player hold `self.cards_per_player` cards again'''
@@ -274,7 +289,6 @@ class DixitGame:
         if self.stage != Stage.LOBBY:
             raise GameAlreadyStartedError("Damn you, {user.first_name}! "
                     "The game has started already!")
-        draw_pile = self.draw_pile
         for player in self.players:
             self.refill_hand(player)
         self.storyteller = choice(self.players)
@@ -382,7 +396,7 @@ class DixitGame:
         self.storyteller = self.players[(s_teller_i + 1) % len(self.players)]
 
         for user in self.lobby:
-            self.add_player(user)
+            assert self.add_player(user) == 3
         self.lobby.clear()
 
         self.clue = None
