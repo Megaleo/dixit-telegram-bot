@@ -157,9 +157,12 @@ def storytellers_turn(update, context):
     '''Instructs the storyteller to choose a clue and a card'''
     dixit_game = get_game(context)
     print(); logging.info("Stage 1: Storyteller's turn!")
-    send_message(f'{dixit_game.storyteller} is the storyteller!\n'
-                 'Please write a clue and click on a card.', update, context,
-                 button='Click to see your cards!')
+    text = f' is the storyteller!\n'\
+            'Please write a clue and click on a card.'
+    send_message(f'{dixit_game.storyteller:@}' + markdown_escape(text),
+                 update, context,
+                 button = 'Click to see your cards!',
+                 parse_mode = 'MarkdownV2')
     if dixit_game.storyteller.id < 0: # If it's a dummy
         card_id = random_card_from_hand(dixit_game.storyteller)
         simulate_inline(dixit_game.storyteller.user, card_id, 'Beep Boop',
