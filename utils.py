@@ -223,3 +223,12 @@ def get_profile_pic(bot, user_id, size):
     photo_file.download(custom_path=filename_jpg)
     filename_png = convert_jpg_to_png(filename_jpg, delete_jpg=True)
     return filename_png
+
+def markdown_escape(string):
+    '''Escapes forbidden symbols when using markdown'''
+    symbols_to_escape = '_*[]()~`>#+-=|{}.!'
+    escaped_string = string
+    for symbol in symbols_to_escape:
+        escaped_string =  escaped_string.replace(symbol, '\\'+symbol)
+    return escaped_string
+
