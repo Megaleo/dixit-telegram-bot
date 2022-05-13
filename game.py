@@ -87,10 +87,10 @@ class Player:
         self.id = self.user.id
 
     def __repr__(self):
-        return f'Player(name={self.name()}, id_={self.id})'
+        return f'Player(name={self.name}, id_={self.id})'
 
     def __str__(self):
-        return self.name()
+        return self.__format__('full')
 
     def __eq__(self, other):
         # we could change self.user.id to self.id, so as to be able to compare
@@ -102,21 +102,38 @@ class Player:
     def __hash__(self):
         return self.id
 
-    def name(self, mode='full', possessive=False):
-        if mode == 'username':
-            return self.name('full', possessive) \
-                + f' ({self.username})'*bool(self.username)
-        elif mode == 'full':
-            monicker = ' '.join(filter(bool, [self.first_name, self.last_name]))
-        elif mode == 'formal':
-            if self.last_name:
-                monicker =  self.first_name[0] + '. ' + self.last_name
-            else:
-                monicker = self.first_name
-        elif mode == 'first': # as self.first_name doesn't have possessives
-            monicker = self.first_name
-        return monicker + ("'" if monicker.endswith('s') else "'s")*possessive
+    def __format__(self, spec='full'):
+        '''spec has the general form [@]format['s], meaning:
+        @      - Mention the user by id. (Optional)
+        format - The name format. One of [full, formal, first]. (Mandatory)
+        's     - Use the possessive form of the name. (Optional)
+        '''
+        # if the spec gets more complex, consider using regex
+        form = spec.removeprefix('@').removesuffix("'s")
+        mention = spec.startswith('@')
+        possessive = spec.endswith("'s")
 
+        if form == 'full':
+            name = ' '.join(filter(bool, [self.first_name, self.last_name]))
+        elif form == 'formal':
+            if self.last_name:
+                name =  self.first_name[0] + '. ' + self.last_name
+            else:
+                name = self.first_name
+        elif form == 'first':
+            name = self.first_name
+        elif form == '':
+            name = self.__format__()
+        else:
+            raise ValueError(f'Unsupported format spec: {spec!r}')
+
+        name += ("'" if name.endswith('s') else "'s")*possessive
+        name = f'[{name}](tg://user?id={self.id})' if mention else name
+        return name
+
+    @property
+    def name(self):
+        return self.__format__('full')
 
     def add_card(self, card):
         self.hand.append(card)

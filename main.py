@@ -288,7 +288,7 @@ def inline_choices(update, context):
         print(); logging.info("Stage 2: Others' turn!")
 
         send_message(f"Now, let the others send their cards!\n"
-                     f"{player.name(possessive=True)} clue: *{dixit_game.clue}*",
+                     f"{player:full's} clue: *{dixit_game.clue}*",
                      update, context, button='Click to see your cards!',
                      parse_mode='Markdown')
 
@@ -308,7 +308,7 @@ def inline_choices(update, context):
         if dixit_game.stage == 3:
             print(); logging.info("Stage 3: Vote!")
             send_message(f"Hear ye, hear ye! Time to vote!\n"
-                         f"{dixit_game.storyteller.name(possessive=True)}"
+                         f"{dixit_game.storyteller:full's}"
                          f" clue: *{dixit_game.clue}*",
                          update, context, button='Click to see the table!',
                          parse_mode='Markdown')
@@ -390,7 +390,7 @@ def end_of_round(update, context):
         delta = results.delta_score[player]
         is_st = player==results.storyteller
         vote = results.votes[player] if not is_st else None
-        log += f'\t{player.name():<20} - {score} (+{delta}), ' \
+        log += f'\t{player.name:<20} - {score} (+{delta}), ' \
               + (f'(voted for {vote})' if not is_st else 'was the Storyteller')\
               + '\n'
     logging.info(log.strip())
@@ -408,7 +408,7 @@ def end_of_round(update, context):
 
 def end_game(results, update, context):
     max_score = max(results.score.values())
-    winners = [p.name() for p in results.score if results.score[p]==max_score]
+    winners = [p.name for p in results.score if results.score[p]==max_score]
     if len(winners) == 1:
         text = f'{winners[0]} has won the game! 🎉'
     else:
