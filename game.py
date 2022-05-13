@@ -411,7 +411,7 @@ class DixitGame:
 
         n_cards_to_be_added = 0
         for player in self.players:
-            n_cards_to_be_added += self.cards_per_player - len(player.cards)
+            n_cards_to_be_added += self.cards_per_player - len(player.hand)
         if len(self.draw_pile) < n_cards_to_be_added: # if not enough cards
             shuffle(self.discard_pile)
             self.draw_pile.extend(self.discard_pile)
