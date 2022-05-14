@@ -68,7 +68,6 @@ def get_game(context):
 
 def set_game(context):
     """Stores current chat ID in `user_data` and sets it as 'current chat'.
-    Returns the game object.
     """
     chat_id = get_chat_id(context)
     context.user_data.setdefault('games', []).append(chat_id)

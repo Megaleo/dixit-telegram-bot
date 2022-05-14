@@ -103,10 +103,10 @@ class Player:
         return self.id
 
     def __format__(self, spec='full'):
-        '''spec has the general form [@]format['s], meaning:
-        @      - Mention the user by id. (Optional)
-        format - The name format. One of [full, formal, first]. (Mandatory)
-        's     - Use the possessive form of the name. (Optional)
+        '''spec has the general form [@][format]['s], meaning:
+        @      - Mention the user by id, (off by default)
+        format - The name format. One of [full (default), formal, first]
+        's     - Use the possessive form of the name (off by default)
         '''
         # if the spec gets more complex, consider using regex
         form = spec.removeprefix('@').removesuffix("'s")
