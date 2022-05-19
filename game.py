@@ -25,22 +25,6 @@ from dataclasses import dataclass
 from uuid import uuid4, UUID
 import copy
 
-'''
-TODO
-
-[ ] Store game history for future analysis?
-
-[/] Be forgiving to mistakes: allow players to overwrite the cards and choices
-    they made (Cards can be overwritten so long a new stage hasn't been triggered)
-
-[X] Fix possible bug: in new_round, when checking if there are enough cards for
-    the next round, it is assumed no more than one card per player will be
-    needed. This might not be true if there are newcoming players who'll need a
-    whole hand.
-
-[ ] Move storyteller selection to DixitGame's __init__
-'''
-
 
 class Stage(IntEnum):
     LOBBY = 0

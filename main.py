@@ -8,55 +8,6 @@ from game import DixitGame
 from utils import *
 from draw import save_results_pic
 
-'''
-TODO
-
-NICE-TO-HAVE'S -----------------------------------------------------------------
-
-[/] Improve the way results are shown; one of the fun parts of dixit is
-    discussing whose answer each person has chosen
-    [X] Present results as an image
-    [ ] Improve image (how?)
-
-[ ] Allow player to join game in the middle of a match
-
-[ ] Send reminders to late players, skip their turn if need be
-
-[ ] Initial data storage for game analysis
-
-[ ] Let the master manually input the max number of rounds/point
-
-[ ] Use improved card images
-
-[ ] Make clue-writing system more self-evident
-    [X] Improve reminder when the storyteller forgets to write a clue
-    [ ] Let the storyteller send clue after choosing card? (I tend to be against it)
-    [ ] Present instructions when the user writes a "?" inline?
-
-ACESSORIES ---------------------------------------------------------------------
-
-[ ] Confirm that the player's chosen cards were available for choosing, at every
-    stage?
-
-[ ] Have the bot reply to the relevant message, instead of sending simple
-    messages, when appropriate
-
-[ ] In case a user was already in a game, make it clear whether it's this in
-    this same game or in another.
-
-[ ] Debugging
-    [/] Create unit tests
-        [ ] Automate dummy testing
-    [ ] Improve terminal output
-
-[ ] Localization
-    [ ] Store display messages in an external file
-    [ ] Implement ability to translate to other languages. Test with pt-BR
-
-[ ] Use python 3.10 syntax to improve code
-
-'''
-
 
 @ensure_game(exists=False)
 @ensure_user_inactive
