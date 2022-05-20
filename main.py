@@ -109,7 +109,7 @@ def storytellers_turn(update, context):
     '''Instructs the storyteller to choose a clue and a card'''
     dixit_game = get_game(context)
     print(); logging.info("Stage 1: Storyteller's turn!")
-    text = ' is the storyteller!\n'
+    text = ' is the storyteller!\n'\
            'Please write a clue and click on a card.'
     send_message(f'{dixit_game.storyteller:@}' + markdown_escape(text),
                  update, context,
