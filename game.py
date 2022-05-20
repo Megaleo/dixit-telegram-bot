@@ -327,6 +327,9 @@ class DixitGame:
 
     def player_turns(self, player, card):
         '''Stores player cards, advances stage when all have played'''
+        if player == self.storyteller:
+            raise PlayerIsStorytellerError("As the Storyteller, you have already "
+                                           "chosen your card and clue, {player}!")
         self.table[player] = card
         if len(self.table) == len(self.players):
             for player, card in self.table.items():
@@ -345,6 +348,9 @@ class DixitGame:
             raise CardHasNoSenderError('This card belongs to no one, {player}!')
         if sender == player:
             raise VotingError("You can't vote for your own card, {player}!")
+        if player == self.storyteller:
+            raise PlayerIsStorytellerError("The Storyteller can't vote, "
+                                           "{player}!")
         self.votes[player] = sender
         if len(self.votes) == len(self.players)-1:
             self.end_of_round()

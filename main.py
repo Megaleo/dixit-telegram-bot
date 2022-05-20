@@ -219,8 +219,9 @@ def inline_callback(update, context):
     update.inline_query.answer(results, cache_time=0)
 
 
-@handle_exceptions(UserNotPlayingError, CardDoesntExistError, ClueNotGivenError,
-                   PlayerNotStorytellerError, CardHasNoSenderError, VotingError)
+@handle_exceptions(UserNotPlayingError, CardDoesntExistError,
+        ClueNotGivenError, PlayerNotStorytellerError, PlayerIsStorytellerError,
+        CardHasNoSenderError, VotingError)
 def inline_choices(update, context):
     '''Processes the cards users choose on inline queries'''
     result = update['chosen_inline_result']

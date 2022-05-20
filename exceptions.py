@@ -25,6 +25,9 @@ class CardDoesntExistError(GameException):
 class PlayerNotStorytellerError(GameException):
     pass
 
+class PlayerIsStorytellerError(GameException):
+    pass
+
 class ClueNotGivenError(GameException):
     pass
 
