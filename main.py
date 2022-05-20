@@ -95,9 +95,9 @@ def start_game_callback(update, context):
             send_message("Playing with two players is not fun... but ok :)",
                          update, context)
         elif len(dixit_game.players) == 1:
-            send_message("WARNING: Playing alone won't let you pass the\
-                          storyteller's phase. Please get a friend or add\
-                          a dummy",
+            send_message("WARNING: Playing alone won't let you pass the"
+                         "storyteller's phase. Please get a friend or add"
+                         "a dummy",
                          update, context)
 
     dixit_game.start_game(user)  # can no longer log the chosen cards!
@@ -109,8 +109,8 @@ def storytellers_turn(update, context):
     '''Instructs the storyteller to choose a clue and a card'''
     dixit_game = get_game(context)
     print(); logging.info("Stage 1: Storyteller's turn!")
-    text = ' is the storyteller!\n\
-            Please write a clue and click on a card.'
+    text = ' is the storyteller!\n'
+           'Please write a clue and click on a card.'
     send_message(f'{dixit_game.storyteller:@}' + markdown_escape(text),
                  update, context,
                  button='Click to see your cards!',
@@ -147,8 +147,8 @@ def query_callback(update, context):
         if value == 'LAST_CARD':
             text = 'Playing by the book, commendable!'
         elif value == 'POINTS':
-            text = "Would you like to end the game whenever someone first \
-                    reaches how many points?"
+            text = "Would you like to end the game whenever someone first "\
+                   "reaches how many points?"
             markup = InlineKeyboardMarkup.from_row(
                      [InlineKeyboardButton(n, callback_data=f'end value:{n}')
                      for n in (3, 10, 25, 50, 100)]
@@ -184,8 +184,8 @@ def query_callback(update, context):
                               )
             dixit_game.add_player(dummy_user)
         context.chat_data['added_dummies'] = True
-        text = f'{dummies_n} dummies added to the game!\n\
-                 Please click on /start again'
+        text = f'{dummies_n} dummies added to the game!\n'\
+                'Please click on /start again'
 
     query.answer(text='Settings saved!')
     query.edit_message_text(text=text, reply_markup=markup)
