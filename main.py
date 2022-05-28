@@ -4,6 +4,7 @@ from telegram.ext import (Updater, CommandHandler, InlineQueryHandler,
 from telegram.error import Unauthorized, InvalidToken
 import logging
 import sys
+import io
 from game import DixitGame
 from utils import *
 from draw import save_results_pic
@@ -327,11 +328,13 @@ def show_results_text(results, update, context):
 
 def show_results_pic(results, update, context):
     '''Sends results pic'''
+    card_images = context.bot_data["card_images"]
     dixit_game = get_game(context)
     n = f'{dixit_game.game_number}.{dixit_game.round_number}'
-    results_fn = save_results_pic(results, n=n)
-    results_file = open(results_fn, 'rb')
-    send_photo(results_file, update, context)
+    with io.BytesIO() as file:
+        save_results_pic(results, file, card_images, n=n) 
+        file.seek(0) # Rewind file pointer to beginning
+        send_photo(file, update, context)
 
 
 def end_of_round(update, context):
@@ -383,7 +386,7 @@ def end_game(results, update, context):
 def run_bot(token):
     '''Tells the bot to use the functions we've defined, starts the main loop'''
     updater = Updater(token, use_context=True)
-    dispatcher = updater.dispatcher
+    dispatcher = updater.dispatcher 
 
     # Add commands handlers
     command_callbacks = {'newgame': new_game_callback,
@@ -401,6 +404,9 @@ def run_bot(token):
 
     # Add ChosenInlineResultHandler, to get the user choices made inline
     dispatcher.add_handler(ChosenInlineResultHandler(inline_choices))
+
+    # Load card images into memory
+    dispatcher.bot_data["card_images"] = load_cards()
 
     # Start the bot
     updater.start_polling()
