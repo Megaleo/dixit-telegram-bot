@@ -328,11 +328,11 @@ def show_results_text(results, update, context):
 
 def show_results_pic(results, update, context):
     '''Sends results pic'''
-    card_surfaces = context.bot_data["card_surfaces"]
+    card_images = context.bot_data["card_images"]
     dixit_game = get_game(context)
     n = f'{dixit_game.game_number}.{dixit_game.round_number}'
     with io.BytesIO() as file:
-        save_results_pic(results, file, card_surfaces, n=n)
+        save_results_pic(results, file, card_images, n=n) 
         file.seek(0) # Rewind file pointer to beginning
         send_photo(file, update, context)
 
@@ -406,7 +406,7 @@ def run_bot(token):
     dispatcher.add_handler(ChosenInlineResultHandler(inline_choices))
 
     # Load card images into memory
-    dispatcher.bot_data["card_surfaces"] = load_cards()
+    dispatcher.bot_data["card_images"] = load_cards()
 
     # Start the bot
     updater.start_polling()
