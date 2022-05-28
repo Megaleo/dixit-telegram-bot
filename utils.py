@@ -6,6 +6,7 @@ from functools import wraps
 from exceptions import *
 from enum import IntEnum
 from PIL import Image
+from cairo import ImageSurface
 from random import choice
 import logging
 import os
@@ -176,6 +177,15 @@ def convert_jpg_to_png(filename_jpg, delete_jpg=False):
         os.remove(filename_jpg)
     return filename_png
 
+# Load card images into memory.
+def load_cards():
+    card_surfaces = {}
+    for card_file in os.listdir('assets/cards/png/'):
+        image = open(f'assets/cards/png/{card_file}', 'rb')
+        cairo_surface = ImageSurface.create_from_png(image)
+        card_surfaces[int(card_file[5:-4])] = cairo_surface
+    assert len(card_surfaces) == 372
+    return card_surfaces
 
 class TelegramPhotoSize(IntEnum):
     # The sizes are from my experience. Don't trust this

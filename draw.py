@@ -15,13 +15,16 @@ TODO
     [X] Highlight storyteller better
 '''
 
-def draw_card(ctx, card):
-    file_jpeg = urlopen(card.url)
-    pil_file_jpeg = Image.open(file_jpeg)
-    png_filename = f'tmp/card_{card.image_id:0>5}.png'
-    pil_file_jpeg.save(png_filename)
-    card_surface = ImageSurface.create_from_png(png_filename)
-
+def draw_card(ctx, card, from_memory=True, card_surfaces={}):
+    if from_memory:
+        card_surface = card_surfaces[card.image_id]
+    else:
+        file_jpeg = urlopen(card.url)
+        pil_file_jpeg = Image.open(file_jpeg)
+        filename = f'tmp/card_{card.image_id:0>5}.png'
+        pil_file_jpeg.save(filename)
+        card_surface = ImageSurface.create_from_png(card_image)
+    
     ctx.scale(1/card_surface.get_width(), 1/card_surface.get_height())
     ctx.set_source_surface(card_surface, 0, 0)
     ctx.paint()
@@ -116,7 +119,7 @@ clue_color = (0.0, 0.0, 0.0)
 delta_score_color = (0.0, 0.6, 0.0)
 
 card_width=236/2
-def draw_results(ctx, results):
+def draw_results(ctx, results, card_surfaces):
     total_width = (1 + 2*card_hor_border)*len(results.players) + 2*results_border
     total_height = voted_pic_diam + score_height + card_aspect_ratio + voter_pic_diam + clue_height + 2*results_border
 
@@ -197,7 +200,7 @@ def draw_results(ctx, results):
         ctx.translate(0, score_height + voted_pic_diam)
         ctx.scale(1, card_aspect_ratio)
 
-        draw_card(ctx, results.table[player])
+        draw_card(ctx, results.table[player], from_memory=True, card_surfaces=card_surfaces)
 
         ctx.scale(1, 1/card_aspect_ratio)
         ctx.translate(0, - (score_height + voted_pic_diam))
@@ -221,8 +224,8 @@ def draw_results(ctx, results):
         ctx.translate(1 + card_hor_border, 0)
     ctx.translate(-results_border, -results_border)
 
-def save_results_pic(results, n=0, card_width=236):
-    '''Saves results picture in tmp/results_pic_{n}.png. Returns filename'''
+def save_results_pic(results, file, card_surfaces, n=0, card_width=236):
+    '''Saves results picture to file'''
     filename = f'tmp/results_pic_{n}.png'
     total_width = (1 + 2*card_hor_border)*len(results.players) + 2*results_border
     total_height = voted_pic_diam + score_height + card_aspect_ratio + voter_pic_diam + clue_height + 2*results_border
@@ -235,8 +238,7 @@ def save_results_pic(results, n=0, card_width=236):
 
     ctx.scale(width, height)
 
-    draw_results(ctx, results)
+    draw_results(ctx, results, card_surfaces)
 
-    surface.write_to_png(filename)
+    surface.write_to_png(file)
 
-    return filename
