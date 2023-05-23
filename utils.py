@@ -10,6 +10,7 @@ from cairo import ImageSurface
 from random import choice
 import logging
 import os
+import gc
 
 def send_message(text, update, context, button=None, **kwargs):
     '''Sends message to group chat specified in update and logs it. If the
@@ -186,7 +187,7 @@ def load_cards():
         card_images[int(card_file[5:-4])] = image
     assert len(card_images) == 372
     return card_images
-
+gc.collect()
 class TelegramPhotoSize(IntEnum):
     # The sizes are from my experience. Don't trust this
     SMALL = 0 # 160x160
